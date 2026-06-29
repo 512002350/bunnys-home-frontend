@@ -276,6 +276,16 @@ export default function ChatArea({
     inputRef.current?.focus();
   };
 
+  // 去除 AI 回复中的 Markdown 格式标记（** **, __ __, ~~ ~~ 等）
+  const stripMarkdown = (text) => {
+    if (!text) return '';
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '$1')     // **粗体**
+      .replace(/__(.+?)__/g, '$1')          // __粗体__
+      .replace(/~~(.+?)~~/g, '$1')          // ~~删除线~~
+      .replace(/`(.+?)`/g, '$1');           // `代码`
+  };
+
   // 检测 sticker 标记并渲染
   const renderContent = (content) => {
     if (!content) return '';
@@ -440,22 +450,7 @@ export default function ChatArea({
           return dateSep ? [dateSep, groupEl] : groupEl;
         })}
 
-        {loading && (
-          <div className="typing-indicator">
-            <div
-              className="typing-avatar"
-              style={{ background: avatarColor(characterId) }}
-            >
-              {getInitial(characterName)}
-            </div>
-            <div className="typing-bubble">
-              <span className="typing-text">正在输入</span>
-              <span className="typing-dot-anim">.</span>
-              <span className="typing-dot-anim">.</span>
-              <span className="typing-dot-anim">.</span>
-            </div>
-          </div>
-        )}
+        {/* 正在输入状态通过头部状态栏显示，此处不再渲染气泡 */}
       </div>
 
       {/* 滚动到底部按钮 */}

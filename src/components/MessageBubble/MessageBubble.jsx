@@ -1,4 +1,4 @@
-import { useState } from 'react';
+// Thinking 内容不再展示，故移除 useState
 
 /**
  * 头像颜色
@@ -47,8 +47,7 @@ export default function MessageBubble({
   showAvatar = false,
   senderName = null,
 }) {
-  const [thinkingOpen, setThinkingOpen] = useState(false);
-
+  // thinking 内容不展示在聊天界面中
   const isUser = role === 'user';
 
   return (
@@ -77,21 +76,6 @@ export default function MessageBubble({
         {/* 发送者名字 */}
         {senderName && (
           <div className="message-sender-name">{senderName}</div>
-        )}
-
-        {/* Thinking 折叠 */}
-        {thinking && (
-          <div className="thinking-fold">
-            <button
-              className="thinking-toggle"
-              onClick={() => setThinkingOpen(!thinkingOpen)}
-            >
-              {thinkingOpen ? '▾' : '▸'} {thinkingOpen ? '收起思考' : '查看思考过程'}
-            </button>
-            {thinkingOpen && (
-              <div className="thinking-content">{thinking}</div>
-            )}
-          </div>
         )}
 
         {/* 气泡 */}
