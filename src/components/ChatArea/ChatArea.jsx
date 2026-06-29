@@ -13,6 +13,7 @@ export default function ChatArea({
   stickers,
   onUploadSticker,
   messageListRef,
+  onMenuClick,
 }) {
   const [input, setInput] = useState('');
   const [showStickers, setShowStickers] = useState(false);
@@ -67,6 +68,10 @@ export default function ChatArea({
   if (!sessionId) {
     return (
       <main className="chat-area">
+        <div className="chat-header">
+          <button className="hamburger-btn" onClick={onMenuClick} title="菜单">☰</button>
+          <span className="chat-title">Bunny's Home</span>
+        </div>
         <div className="empty-chat">
           🐰 选择一个会话或新建一个，开始和 Bunny 聊天吧
         </div>
@@ -77,6 +82,7 @@ export default function ChatArea({
   return (
     <main className="chat-area">
       <div className="chat-header">
+        <button className="hamburger-btn" onClick={onMenuClick} title="菜单">☰</button>
         <span className="chat-title">
           {messages.length > 0 ? '对话中' : '新对话'}
         </span>

@@ -501,8 +501,213 @@ body {
 }
 .sticker-upload-area:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ===== 汉堡菜单按钮（仅手机端显示） ===== */
+.hamburger-btn,
+.sidebar-close-btn {
+  display: none;
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 16px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.hamburger-btn:hover,
+.sidebar-close-btn:hover { background: var(--border); }
+
+/* ===== 侧边栏遮罩（仅手机端） ===== */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 90;
+}
+
 /* ===== 滚动条 ===== */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ================================================================ */
+/*                         手机端适配 (≤768px)                        */
+/* ================================================================ */
+@media (max-width: 768px) {
+  body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+
+  #root {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .app {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* --- 汉堡按钮 & 关闭按钮可见 --- */
+  .hamburger-btn,
+  .sidebar-close-btn {
+    display: flex;
+  }
+
+  /* --- 侧边栏变滑出式 --- */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 280px;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 2px 0 16px rgba(0,0,0,0.1);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* 遮罩可见 */
+  .sidebar-overlay.visible {
+    display: block;
+  }
+
+  /* --- 对话区全宽 --- */
+  .chat-area {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .chat-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .chat-title {
+    font-size: 14px;
+  }
+
+  .model-select {
+    font-size: 12px;
+    padding: 5px 8px;
+    max-width: 130px;
+  }
+
+  /* --- 消息列表 --- */
+  .message-list {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .message-row {
+    max-width: 88%;
+  }
+
+  .message-bubble {
+    font-size: 14px;
+    padding: 10px 14px;
+  }
+
+  /* --- 输入区 --- */
+  .input-area {
+    padding: 8px 10px 12px;
+    gap: 6px;
+  }
+
+  .chat-input {
+    font-size: 16px;        /* 防止 iOS 缩放 */
+    padding: 8px 12px;
+    min-height: 40px;
+  }
+
+  .send-btn, .sticker-btn {
+    width: 38px; height: 38px;
+    font-size: 16px;
+  }
+
+  /* --- 设置面板 --- */
+  .settings-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 20px;
+  }
+
+  .settings-panel h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+
+  .setting-group { margin-bottom: 14px; }
+  .setting-group textarea { min-height: 80px; font-size: 14px; }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+  .settings-actions .btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  /* --- 表情面板 --- */
+  .sticker-panel {
+    max-width: calc(100vw - 24px);
+    left: -100px; /* 向右展开 */
+    bottom: 50px;
+  }
+
+  .sticker-panel-item,
+  .sticker-upload-area {
+    width: 56px; height: 56px;
+  }
+
+  /* --- 空状态 --- */
+  .empty-chat {
+    font-size: 14px;
+    padding: 0 20px;
+    text-align: center;
+  }
+
+  /* --- 滚动条变窄 --- */
+  ::-webkit-scrollbar { width: 3px; }
+}
+
+/* ================================================================ */
+/*                         超小屏 (≤400px)                           */
+/* ================================================================ */
+@media (max-width: 400px) {
+  .message-row {
+    max-width: 94%;
+  }
+
+  .message-bubble {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .input-area {
+    padding: 6px 6px 10px;
+    gap: 4px;
+  }
+
+  .chat-input {
+    font-size: 15px;
+  }
+
+  .send-btn, .sticker-btn {
+    width: 34px; height: 34px;
+  }
+}

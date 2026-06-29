@@ -1,6 +1,8 @@
 export default function Sidebar({
   sessions,
   currentSessionId,
+  isOpen,
+  onClose,
   onSwitch,
   onNew,
   onRename,
@@ -8,10 +10,13 @@ export default function Sidebar({
   onSettings,
 }) {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <h1>🐰 Bunny's Home</h1>
-        <button className="new-session-btn" onClick={onNew} title="新建会话">+</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="new-session-btn" onClick={onNew} title="新建会话">+</button>
+          <button className="sidebar-close-btn" onClick={onClose} title="关闭菜单">✕</button>
+        </div>
       </div>
 
       <div className="session-list">

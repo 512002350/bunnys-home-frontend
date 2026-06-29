@@ -29,6 +29,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(null);
   const [stickers, setStickers] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messageListRef = useRef(null);
 
   // 加载会话列表
@@ -56,6 +57,7 @@ export default function App() {
   // 切换会话
   const switchSession = useCallback(async (sessionId) => {
     setCurrentSessionId(sessionId);
+    setSidebarOpen(false);
     localStorage.setItem('bunny_session', sessionId);
     if (!messages[sessionId]) {
       try {
@@ -167,6 +169,7 @@ export default function App() {
 
   // 设置
   const handleOpenSettings = useCallback(async () => {
+    setSidebarOpen(false);
     try {
       const data = await api.getSettings();
       setSettings(data.settings);
@@ -200,9 +203,15 @@ export default function App() {
 
   return (
     <div className="app">
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
       <Sidebar
         sessions={sessions}
         currentSessionId={currentSessionId}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         onSwitch={switchSession}
         onNew={handleNewSession}
         onRename={handleRenameSession}
@@ -220,6 +229,7 @@ export default function App() {
         stickers={stickers}
         onUploadSticker={handleUploadSticker}
         messageListRef={messageListRef}
+        onMenuClick={() => setSidebarOpen(true)}
       />
       {showSettings && (
         <Settings
