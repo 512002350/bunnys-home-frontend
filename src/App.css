@@ -444,6 +444,7 @@ body {
 .message-group {
   display: flex;
   flex-direction: column;
+  margin-bottom: 10px;
 }
 
 /* 行：消息组内的一条 */

@@ -37,33 +37,49 @@ function useStaggeredReveal(messages, loading) {
     if (isNewMultiBatch) {
       // 新的多段 AI 回复 → 逐条解锁
       const newIndices = new Set();
-      // 批次之前的旧消息全部可见
       for (let i = 0; i < aiStart; i++) {
         newIndices.add(i);
       }
-      // 批内第一条立即可见
-      newIndices.add(aiStart);
+      newIndices.add(aiStart); // 第一条立即可见
       setRevealedIndices(newIndices);
 
       // 清除旧 timer
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
 
-      // 后续条错峰 3-5 秒解锁
-      let next = aiStart + 1;
-      if (next < messages.length) {
-        timerRef.current = setInterval(() => {
+      /**
+       * 根据内容长短计算错峰延迟
+       * 短内容（≤20字）: 1.5~2.5秒
+       * 中等（20~80字）: 2.5~4秒
+       * 长内容（>80字）: 4~7秒
+       */
+      const calcDelay = (content) => {
+        const len = content?.length || 0;
+        const base = 1500;                         // 基础 1.5 秒
+        const perChar = 35;                        // 每字 +35ms
+        const noise = Math.random() * 1000;        // 随机 ±0.5s
+        const raw = base + len * perChar + noise;
+        return Math.min(7000, Math.max(1500, raw)); // 限制 1.5~7 秒
+      };
+
+      // 递归 setTimeout 链：每次解锁下一条，根据下一条长度算延迟
+      let idx = aiStart + 1;
+      const revealNext = () => {
+        if (idx >= messages.length) {
+          timerRef.current = null;
+          return;
+        }
+        const delay = calcDelay(messages[idx]?.content);
+        timerRef.current = setTimeout(() => {
           setRevealedIndices(prev => {
             const updated = new Set(prev);
-            updated.add(next);
-            if (next >= messages.length - 1) {
-              clearInterval(timerRef.current);
-              timerRef.current = null;
-            }
+            updated.add(idx);
             return updated;
           });
-          next++;
-        }, 3000 + Math.random() * 2000); // 3~5 秒
-      }
+          idx++;
+          revealNext();
+        }, delay);
+      };
+      revealNext();
     } else {
       // 单条或历史消息 → 全部立即可见
       const all = new Set();
@@ -72,7 +88,7 @@ function useStaggeredReveal(messages, loading) {
     }
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [messages.length]); // eslint-disable-line
 
