@@ -127,11 +127,15 @@ export default function ChatArea({
 
         <div className="input-wrapper">
           {showStickers && (
-            <StickerPicker
-              stickers={stickers}
-              onSelect={handleStickerSelect}
-              onUpload={onUploadSticker}
-            />
+            <>
+              <div className="sticker-backdrop" onClick={() => setShowStickers(false)} />
+              <StickerPicker
+                stickers={stickers}
+                onSelect={handleStickerSelect}
+                onUpload={onUploadSticker}
+                onClose={() => setShowStickers(false)}
+              />
+            </>
           )}
           <textarea
             ref={inputRef}
