@@ -276,11 +276,13 @@ export default function App() {
 
   const currentMessages = messages[currentSessionId] || [];
 
-  // 当前会话的角色信息
-  const currentSession = sessions.find(s => s.id === currentSessionId);
-  const currentCharId = currentSession?.character_id || 'default';
+  // 当前会话的角色信息（优先 localStorage → DB → 默认）
+  const currentCharId = sessionChars[currentSessionId]
+    || sessions.find(s => s.id === currentSessionId)?.character_id
+    || 'default';
   const currentChar = characters.find(c => c.id === currentCharId);
-  const currentCharName = currentChar?.name || (currentCharId === 'default' ? '小鹿' : currentCharId);
+  const currentCharName = currentChar?.name
+    || (currentCharId === 'shenye' ? '沈夜' : '小鹿');
 
   // 切换当前会话的角色（从 ChatArea 头部触发）
   const handleSwitchCharacter = useCallback((charId) => {
