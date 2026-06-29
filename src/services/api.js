@@ -4,7 +4,7 @@
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-async function request(path, options = {}) {
+export async function request(path, options = {}) {
   const url = `${API_URL}${path}`;
   const config = {
     headers: { 'Content-Type': 'application/json' },
@@ -27,11 +27,17 @@ export async function getSessions() {
   return request('/api/sessions');
 }
 
-export async function createSession(name) {
+export async function createSession(name, character) {
   return request('/api/sessions', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, character }),
   });
+}
+
+// ---- 角色 ----
+
+export async function getCharacters() {
+  return request('/api/characters');
 }
 
 export async function renameSession(id, name) {
@@ -47,16 +53,22 @@ export async function deleteSession(id) {
   });
 }
 
+export async function clearSessionMessages(sessionId) {
+  return request(`/api/sessions/${sessionId}/messages`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getSessionMessages(sessionId) {
   return request(`/api/sessions/${sessionId}/messages`);
 }
 
 // ---- 对话 ----
 
-export async function sendMessage(sessionId, message, model) {
+export async function sendMessage(sessionId, message, model, character) {
   return request('/api/chat', {
     method: 'POST',
-    body: JSON.stringify({ sessionId, message, model }),
+    body: JSON.stringify({ sessionId, message, model, character }),
   });
 }
 

@@ -20,6 +20,16 @@ function getStoredSession() {
   catch { return null; }
 }
 
+function getStoredSessionChars() {
+  try { return JSON.parse(localStorage.getItem('bunny_session_chars') || '{}'); }
+  catch { return {}; }
+}
+
+function saveStoredSessionChars(map) {
+  try { localStorage.setItem('bunny_session_chars', JSON.stringify(map)); }
+  catch { /* 静默 */ }
+}
+
 export default function App() {
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(getStoredSession());
@@ -30,7 +40,43 @@ export default function App() {
   const [settings, setSettings] = useState(null);
   const [stickers, setStickers] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [characters, setCharacters] = useState([]);
+  const [sessionChars, setSessionChars] = useState(getStoredSessionChars); // { sessionId: charId }
   const messageListRef = useRef(null);
+
+  // 加载可用角色列表
+  const loadCharacters = useCallback(async () => {
+    try {
+      const data = await api.getCharacters();
+      setCharacters(data.characters || []);
+    } catch (err) {
+      // 接口可能还不存在，静默处理
+    }
+  }, []);
+
+  // 更新会话→角色映射
+  const setSessionChar = useCallback((sessionId, charId) => {
+    setSessionChars(prev => {
+      const next = { ...prev, [sessionId]: charId };
+      saveStoredSessionChars(next);
+      return next;
+    });
+  }, []);
+
+  // 切换角色（调用后端 API）
+  const switchCharacter = useCallback(async (charId) => {
+    try {
+      await api.request('/api/character', {
+        method: 'PUT',
+        body: JSON.stringify({ character: charId }),
+      });
+      if (currentSessionId) {
+        setSessionChar(currentSessionId, charId);
+      }
+    } catch (err) {
+      console.error('切换角色失败:', err);
+    }
+  }, [currentSessionId, setSessionChar]);
 
   // 加载会话列表
   const loadSessions = useCallback(async () => {
@@ -52,7 +98,7 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { loadSessions(); loadStickers(); }, [loadSessions, loadStickers]);
+  useEffect(() => { loadSessions(); loadStickers(); loadCharacters(); }, [loadSessions, loadStickers, loadCharacters]);
 
   // 切换会话
   const switchSession = useCallback(async (sessionId) => {
@@ -67,20 +113,35 @@ export default function App() {
         setMessages(prev => ({ ...prev, [sessionId]: [] }));
       }
     }
-  }, [messages]);
+    // 同步切换会话对应的角色
+    const charId = sessionChars[sessionId] || 'default';
+    api.request('/api/character', {
+      method: 'PUT',
+      body: JSON.stringify({ character: charId }),
+    }).catch(() => {});
+  }, [messages, sessionChars]);
 
-  // 新建会话
-  const handleNewSession = useCallback(async () => {
+  // 新建会话（绑角色）
+  const handleNewSession = useCallback(async (characterId, characterName) => {
     try {
-      const data = await api.createSession();
+      const charId = characterId || 'default';
+      const charName = characterName || '';
+      const sessionName = charName ? `${charName}的对话` : '新对话';
+      const data = await api.createSession(sessionName, charId);
       setSessions(prev => [data.session, ...prev]);
       setCurrentSessionId(data.session.id);
       localStorage.setItem('bunny_session', data.session.id);
       setMessages(prev => ({ ...prev, [data.session.id]: [] }));
+      setSessionChar(data.session.id, charId);
+      // 同步切换后端角色
+      api.request('/api/character', {
+        method: 'PUT',
+        body: JSON.stringify({ character: charId }),
+      }).catch(() => {});
     } catch (err) {
       console.error('创建会话失败:', err);
     }
-  }, []);
+  }, [setSessionChar]);
 
   // 重命名会话
   const handleRenameSession = useCallback(async (id, name) => {
@@ -128,22 +189,36 @@ export default function App() {
     setLoading(true);
 
     try {
-      const result = await api.sendMessage(currentSessionId, text, model);
-      const aiMsg = {
-        id: result.messageId || `ai-${Date.now()}`,
-        session_id: currentSessionId,
-        role: 'assistant',
-        content: result.reply,
-        thinking_content: result.thinking || null,
-        created_at: new Date().toISOString(),
-      };
+      const charId = sessionChars[currentSessionId] || 'default';
+      const result = await api.sendMessage(currentSessionId, text, model, charId);
+
+      // 处理多条 AI 回复（按 \n\n 拆分后逐条入库的）
+      const replies = result.replies || [];
+      const aiMsgs = replies.length > 0
+        ? replies.map((r, i) => ({
+            id: r.messageId || `ai-${Date.now()}-${i}`,
+            session_id: currentSessionId,
+            role: 'assistant',
+            content: r.content,
+            thinking_content: r.thinking || null,
+            created_at: new Date(Date.now() + i * 1000).toISOString(), // 错开时间戳
+          }))
+        : [{
+            // 兼容旧格式
+            id: result.messageId || `ai-${Date.now()}`,
+            session_id: currentSessionId,
+            role: 'assistant',
+            content: result.reply || '',
+            thinking_content: result.thinking || null,
+            created_at: new Date().toISOString(),
+          }];
 
       setMessages(prev => ({
         ...prev,
         [currentSessionId]: [
           ...(prev[currentSessionId] || []).filter(m => m.id !== userMsg.id),
           { ...userMsg, id: `user-${Date.now()}` },
-          aiMsg,
+          ...aiMsgs,
         ],
       }));
 
@@ -201,6 +276,31 @@ export default function App() {
 
   const currentMessages = messages[currentSessionId] || [];
 
+  // 当前会话的角色信息
+  const currentSession = sessions.find(s => s.id === currentSessionId);
+  const currentCharId = currentSession?.character_id || 'default';
+  const currentChar = characters.find(c => c.id === currentCharId);
+  const currentCharName = currentChar?.name || (currentCharId === 'default' ? '小鹿' : currentCharId);
+
+  // 切换当前会话的角色（从 ChatArea 头部触发）
+  const handleSwitchCharacter = useCallback((charId) => {
+    switchCharacter(charId);
+  }, [switchCharacter]);
+
+  // 清空当前会话的所有消息
+  const handleClearHistory = useCallback(async () => {
+    if (!currentSessionId) return;
+    try {
+      await api.clearSessionMessages(currentSessionId);
+      // 前端清除消息缓存
+      setMessages(prev => ({ ...prev, [currentSessionId]: [] }));
+      // 刷新会话列表（更新时间戳）
+      loadSessions();
+    } catch (err) {
+      alert('清空失败: ' + err.message);
+    }
+  }, [currentSessionId, loadSessions]);
+
   return (
     <div className="app">
       <div
@@ -217,6 +317,7 @@ export default function App() {
         onRename={handleRenameSession}
         onDelete={handleDeleteSession}
         onSettings={handleOpenSettings}
+        characters={characters}
       />
       <ChatArea
         sessionId={currentSessionId}
@@ -230,6 +331,11 @@ export default function App() {
         onUploadSticker={handleUploadSticker}
         messageListRef={messageListRef}
         onMenuClick={() => setSidebarOpen(true)}
+        characterName={currentCharName}
+        characterId={currentCharId}
+        characters={characters}
+        onSwitchCharacter={handleSwitchCharacter}
+        onClearHistory={handleClearHistory}
       />
       {showSettings && (
         <Settings

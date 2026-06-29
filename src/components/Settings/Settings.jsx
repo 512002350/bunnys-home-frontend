@@ -33,11 +33,12 @@ export default function Settings({ settings, onSave, onClose }) {
 
         <form onSubmit={handleSubmit}>
           <div className="setting-group">
-            <label>系统提示词（定义 AI 人格）</label>
+            <label>系统提示词（定义 AI 人格与写作风格）</label>
             <textarea
               value={form.system_prompt}
               onChange={e => handleChange('system_prompt', e.target.value)}
               placeholder="你是一个温柔友善的 AI 伴侣..."
+              rows={4}
             />
           </div>
 
@@ -50,7 +51,8 @@ export default function Settings({ settings, onSave, onClose }) {
               onChange={e => handleChange('temperature', e.target.value)}
             />
             <div className="range-labels">
-              <span>更确定(0)</span><span>更创造(2)</span>
+              <span>更确定 (0)</span>
+              <span>更创造 (2)</span>
             </div>
           </div>
 

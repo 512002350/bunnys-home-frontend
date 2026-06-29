@@ -26,11 +26,12 @@ export default function StickerPicker({ stickers, onSelect, onUpload, onClose })
         {stickers.map(s => (
           <img
             key={s.id}
-            src={s.url.startsWith('data:') ? s.url : s.url}
+            src={s.url}
             alt={s.name}
-            title={`${s.name}: ${s.descr}`}
+            title={`${s.name}: ${s.descr || ''}`}
             className="sticker-panel-item"
             onClick={() => onSelect(s)}
+            loading="lazy"
           />
         ))}
         <div
