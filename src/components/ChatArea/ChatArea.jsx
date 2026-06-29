@@ -169,13 +169,11 @@ export default function ChatArea({
   characterName = '小鹿',
   characterId = 'default',
   characters = [],
-  onSwitchCharacter,
   onClearHistory,
 }) {
   const [input, setInput] = useState('');
   const [showStickers, setShowStickers] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const [showCharDropdown, setShowCharDropdown] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const inputRef = useRef(null);
   const listRef = messageListRef || useRef(null);
@@ -296,11 +294,10 @@ export default function ChatArea({
       <div className="chat-header">
         <button className="hamburger-btn" onClick={onMenuClick} title="菜单">☰</button>
 
-        {/* 角色切换：点击头像/名字弹出选择 */}
+        {/* 当前对话对象（不可点击切换，避免混淆） */}
         <div
           className="chat-header-char"
-          onClick={() => characters.length > 1 && setShowCharDropdown(!showCharDropdown)}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: characters.length > 1 ? 'pointer' : 'default', position: 'relative' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}
         >
           <div
             className="chat-header-avatar"
@@ -309,48 +306,11 @@ export default function ChatArea({
             {getInitial(characterName)}
           </div>
           <div className="chat-header-info">
-            <div className="chat-header-name" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {characterName}
-              {characters.length > 1 && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>▾</span>}
-            </div>
+            <div className="chat-header-name">{characterName}</div>
             <div className="chat-header-status">
               {loading ? '正在输入...' : '在线'}
             </div>
           </div>
-
-          {/* 角色下拉 */}
-          {showCharDropdown && (
-            <>
-              <div
-                className="char-dropdown-backdrop"
-                onClick={(e) => { e.stopPropagation(); setShowCharDropdown(false); }}
-              />
-              <div className="char-dropdown" onClick={e => e.stopPropagation()}>
-                {characters.map(c => (
-                  <div
-                    key={c.id}
-                    className={`char-dropdown-item ${c.id === characterId ? 'active' : ''}`}
-                    onClick={() => {
-                      onSwitchCharacter?.(c.id);
-                      setShowCharDropdown(false);
-                    }}
-                  >
-                    <div
-                      className="char-dropdown-avatar"
-                      style={{ background: avatarColor(c.id) }}
-                    >
-                      {getInitial(c.name)}
-                    </div>
-                    <div>
-                      <div className="char-dropdown-name">{c.name}</div>
-                      <div className="char-dropdown-desc">{c.description || ''}</div>
-                    </div>
-                    {c.id === characterId && <span className="char-dropdown-check">✓</span>}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
         </div>
 
         <div className="chat-header-actions">

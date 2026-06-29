@@ -63,21 +63,6 @@ export default function App() {
     });
   }, []);
 
-  // 切换角色（调用后端 API）
-  const switchCharacter = useCallback(async (charId) => {
-    try {
-      await api.request('/api/character', {
-        method: 'PUT',
-        body: JSON.stringify({ character: charId }),
-      });
-      if (currentSessionId) {
-        setSessionChar(currentSessionId, charId);
-      }
-    } catch (err) {
-      console.error('切换角色失败:', err);
-    }
-  }, [currentSessionId, setSessionChar]);
-
   // 加载会话列表
   const loadSessions = useCallback(async () => {
     try {
@@ -284,11 +269,6 @@ export default function App() {
   const currentCharName = currentChar?.name
     || (currentCharId === 'shenye' ? '沈夜' : '小鹿');
 
-  // 切换当前会话的角色（从 ChatArea 头部触发）
-  const handleSwitchCharacter = useCallback((charId) => {
-    switchCharacter(charId);
-  }, [switchCharacter]);
-
   // 清空当前会话的所有消息
   const handleClearHistory = useCallback(async () => {
     if (!currentSessionId) return;
@@ -336,7 +316,6 @@ export default function App() {
         characterName={currentCharName}
         characterId={currentCharId}
         characters={characters}
-        onSwitchCharacter={handleSwitchCharacter}
         onClearHistory={handleClearHistory}
       />
       {showSettings && (
