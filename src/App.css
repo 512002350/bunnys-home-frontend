@@ -662,11 +662,22 @@ body {
     font-size: 14px;
   }
 
-  /* --- 表情面板 --- */
+  /* --- 表情面板：fixed 底部弹出，不溢出 --- */
   .sticker-panel {
-    max-width: calc(100vw - 24px);
-    left: -100px; /* 向右展开 */
-    bottom: 50px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 100vw;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 16px 12px max(env(safe-area-inset-bottom, 12px), 12px);
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+    z-index: 50;
+    max-height: 50vh;
+    overflow-y: auto;
   }
 
   .sticker-panel-item,
