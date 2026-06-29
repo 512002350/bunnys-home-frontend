@@ -403,8 +403,14 @@ export default function ChatArea({
             lastDateLabel = group.dateLabel;
           }
 
+          // 动画标记：后 3 组标记为 animate-in
+          const groupAge = messageGroups.length - 1 - gi;
+          const animClass = groupAge < 3
+            ? `animate-in ${group.role === 'user' ? 'user-group' : 'assistant-group'}${groupAge > 0 ? ` stagger-${Math.min(groupAge, 3)}` : ''}`
+            : '';
+
           const groupEl = (
-            <div className="message-group" key={`g-${gi}`}>
+            <div className={`message-group ${animClass}`} key={`g-${gi}`}>
               {group.messages.map((msg, mi) => {
                 const isFirst = mi === 0;
                 const isLast = mi === group.messages.length - 1;

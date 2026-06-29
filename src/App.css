@@ -620,20 +620,85 @@ body {
 
 /* --- 消息入场动画 --- */
 @keyframes msgIn {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px) scale(0.96);
   }
-  to {
+  60% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(-1px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
-.message-group {
-  animation: msgIn 0.25s ease-out;
+
+/* 用户消息从右边滑入 */
+@keyframes msgInUser {
+  0% {
+    opacity: 0;
+    transform: translateX(12px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }
-.message-group:first-child {
+
+/* AI 消息从左边滑入 */
+@keyframes msgInAssistant {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(2px) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.message-group {
   animation: none;
+  will-change: transform, opacity;
+}
+
+/* 只有新增的消息组才播动画（通过 JS 添加 class） */
+.message-group.animate-in {
+  animation: msgIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.message-group.animate-in.user-group {
+  animation-name: msgInUser;
+}
+.message-group.animate-in.assistant-group {
+  animation-name: msgInAssistant;
+}
+
+/* 错峰：批内第二条起延迟 */
+.message-group.animate-in.stagger-1 { animation-delay: 0.05s; }
+.message-group.animate-in.stagger-2 { animation-delay: 0.1s; }
+.message-group.animate-in.stagger-3 { animation-delay: 0.15s; }
+
+/* --- 气泡微交互 --- */
+.message-bubble {
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.message-bubble:hover {
+  transform: translateY(-1px);
+}
+.message-row.user .message-bubble:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.message-row.assistant .message-bubble:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 /* ================================================================ */
@@ -668,12 +733,7 @@ body {
   box-shadow: 0 4px 16px rgba(0,0,0,0.14);
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ================================================================ */
+/* fadeInUp 定义在下方（回到底部按钮动画处），此处不重复 */
 /*                         输入区域                                  */
 /* ================================================================ */
 
@@ -695,12 +755,12 @@ body {
   background: var(--bg-sidebar);
   border-radius: 22px;
   border: 1px solid transparent;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   padding: 2px;
 }
 .input-wrapper:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-light);
+  box-shadow: 0 0 0 3px rgba(42,171,238,0.15);
   background: #fff;
 }
 
@@ -738,20 +798,26 @@ body {
 }
 .send-btn:hover {
   background: var(--accent-hover);
-  transform: scale(1.04);
+  transform: scale(1.06);
 }
 .send-btn:active {
-  transform: scale(0.96);
+  transform: scale(0.94);
+  transition: transform 0.08s ease;
 }
 .send-btn:disabled {
   background: #E0E0E0;
   color: #B0B0B0;
   cursor: not-allowed;
   transform: none;
+  transition: all 0.25s ease;
 }
 .send-btn svg {
   width: 20px;
   height: 20px;
+  transition: transform 0.2s ease;
+}
+.send-btn:not(:disabled):hover svg {
+  transform: translateX(2px);
 }
 
 .sticker-btn {
@@ -766,15 +832,20 @@ body {
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
   flex-shrink: 0;
 }
 .sticker-btn:hover {
   background: rgba(0,0,0,0.04);
   color: var(--text);
+  transform: scale(1.08);
+}
+.sticker-btn:active {
+  transform: scale(0.92);
 }
 .sticker-btn.active {
   color: var(--accent);
+  background: var(--accent-light);
 }
 
 /* ================================================================ */
@@ -790,8 +861,14 @@ body {
 }
 
 @keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  0%   { opacity: 0; transform: translateY(8px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 回到底部按钮动画 */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* 头像 */
