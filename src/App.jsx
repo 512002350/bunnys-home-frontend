@@ -98,13 +98,27 @@ export default function App() {
         setMessages(prev => ({ ...prev, [sessionId]: [] }));
       }
     }
-    // 同步切换会话对应的角色
-    const charId = sessionChars[sessionId] || 'default';
+
+    // 确定会话角色：localStorage → DB → 会话名推测 → 默认
+    let charId = sessionChars[sessionId];
+    if (!charId) {
+      const session = sessions.find(s => s.id === sessionId);
+      charId = session?.character_id;  // DB 字段（如有）
+      if (!charId) {
+        // 尝试从会话名推测角色
+        const name = session?.name || '';
+        const matchedChar = characters.find(c => c.name && name.includes(c.name));
+        charId = matchedChar?.id || 'default';
+      }
+      // 记住这个映射，下次直接命中
+      setSessionChar(sessionId, charId);
+    }
+
     api.request('/api/character', {
       method: 'PUT',
       body: JSON.stringify({ character: charId }),
     }).catch(() => {});
-  }, [messages, sessionChars]);
+  }, [messages, sessionChars, sessions, characters, setSessionChar]);
 
   // 新建会话（绑角色）
   const handleNewSession = useCallback(async (characterId, characterName) => {
@@ -261,10 +275,22 @@ export default function App() {
 
   const currentMessages = messages[currentSessionId] || [];
 
-  // 当前会话的角色信息（优先 localStorage → DB → 默认）
-  const currentCharId = sessionChars[currentSessionId]
-    || sessions.find(s => s.id === currentSessionId)?.character_id
-    || 'default';
+  // 当前会话的角色信息（localStorage → DB → 会话名推测 → 默认）
+  const currentSession = sessions.find(s => s.id === currentSessionId);
+  const currentCharId = (() => {
+    if (currentSessionId && sessionChars[currentSessionId]) {
+      return sessionChars[currentSessionId];
+    }
+    if (currentSession?.character_id) {
+      return currentSession.character_id;
+    }
+    // 从会话名推测（如 "沈夜的对话" → shenye）
+    if (currentSession?.name) {
+      const matchedChar = characters.find(c => c.name && currentSession.name.includes(c.name));
+      if (matchedChar) return matchedChar.id;
+    }
+    return 'default';
+  })();
   const currentChar = characters.find(c => c.id === currentCharId);
   const currentCharName = currentChar?.name
     || (currentCharId === 'shenye' ? '沈夜' : '小鹿');
