@@ -1248,7 +1248,7 @@ button { touch-action: manipulation; }
   z-index: 20;
   display: flex; flex-direction: column; gap: 2px;
   min-width: 150px;
-  animation: slideUp 0.2s ease-out;
+  animation: fadeIn 0.15s ease-out;
 }
 .image-picker-option {
   display: flex; align-items: center; gap: 10px;
@@ -1578,7 +1578,7 @@ button { touch-action: manipulation; }
   max-width: 90vw;
   z-index: 201;
   box-shadow: 0 8px 40px rgba(0,0,0,0.18);
-  animation: slideUp 0.2s ease-out;
+  animation: fadeIn 0.18s ease-out;
 }
 
 .char-picker-title {
