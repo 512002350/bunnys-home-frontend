@@ -33,7 +33,7 @@
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
   font-family: var(--font);
@@ -46,6 +46,8 @@ body {
   height: 100vh;
   font-size: 15px;
 }
+
+button { touch-action: manipulation; }
 
 #root {
   height: 100vh;
@@ -632,15 +634,18 @@ body {
 
 /* 撤回按钮 */
 .retract-btn {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-muted);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 4px 8px;
   opacity: 0;
   transition: opacity 0.15s;
   font-family: var(--font);
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
 }
 .message-row:hover .retract-btn {
   opacity: 0.7;
@@ -2067,6 +2072,15 @@ html, body, #root {
     height: 26px !important;
     font-size: 11px !important;
     border-radius: 6px !important;
+  }
+
+  /* 触摸屏禁用 hover 残留 */
+  .message-bubble:hover,
+  .sticker-panel-item:hover,
+  .sm-skill-card:hover,
+  .chat-image-inline:hover {
+    transform: none;
+    box-shadow: inherit;
   }
 }
 

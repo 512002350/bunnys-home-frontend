@@ -924,6 +924,7 @@ export default function ChatArea({
             onKeyDown={handleKeyDown}
             placeholder="说点什么..."
             rows={1}
+            enterKeyHint="send"
           />
         </div>
 

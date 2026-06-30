@@ -6,7 +6,9 @@ const PRECACHE = ['/', '/index.html', '/manifest.json', '/bunny.svg', '/bunny-19
 // 安装：预缓存核心文件
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE))
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(PRECACHE.map(url => cache.add(url).catch(() => {})))
+    )
   );
   self.skipWaiting();
 });

@@ -48,6 +48,7 @@ export default function Sidebar({
   const [contextMenu, setContextMenu] = useState(null);
   const [showCharPicker, setShowCharPicker] = useState(false);
   const menuRef = useRef(null);
+  const longPressTimerRef = useRef(null);
 
   // 过滤会话
   const filteredSessions = useMemo(() => {
@@ -74,6 +75,30 @@ export default function Sidebar({
     const x = Math.min(e.clientX, window.innerWidth - 180);
     const y = Math.min(e.clientY, window.innerHeight - 120);
     setContextMenu({ x, y, session });
+  };
+
+  // 长按检测（移动端右键菜单）
+  const handleTouchStart = (e, session) => {
+    longPressTimerRef.current = setTimeout(() => {
+      const touch = e.touches[0];
+      const x = Math.min(touch.clientX, window.innerWidth - 180);
+      const y = Math.min(touch.clientY, window.innerHeight - 120);
+      setContextMenu({ x, y, session });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
   };
 
   const handleRename = () => {
@@ -164,6 +189,9 @@ export default function Sidebar({
               className={`session-item ${s.id === currentSessionId ? 'active' : ''}`}
               onClick={() => onSwitch(s.id)}
               onContextMenu={e => handleContextMenu(e, s)}
+              onTouchStart={e => handleTouchStart(e, s)}
+              onTouchEnd={handleTouchEnd}
+              onTouchMove={handleTouchMove}
             >
               <div
                 className="session-avatar"
