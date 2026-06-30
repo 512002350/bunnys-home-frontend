@@ -201,7 +201,9 @@ export default function ChatArea({
   // 图片上传状态
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const imageFileRef = useRef(null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimerRef = useRef(null);
   const listRef = messageListRef || useRef(null);
@@ -241,6 +243,18 @@ export default function ChatArea({
     }
   }, [loading, messages.length]);
 
+  // 图片选择弹出菜单：点击外部关闭
+  useEffect(() => {
+    if (!showImagePicker) return;
+    const handleClick = (e) => {
+      if (!e.target.closest('.image-picker-popup') && !e.target.closest('.image-btn')) {
+        setShowImagePicker(false);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [showImagePicker]);
+
   const handleInputFocus = () => {
     const now = Date.now();
     const m = typingMetricsRef.current;
@@ -274,11 +288,13 @@ export default function ChatArea({
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+    setShowImagePicker(false);
   };
 
   const removeImagePreview = () => {
     setImagePreview(null);
-    if (imageFileRef.current) imageFileRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
   const handleInputChangeWithTracking = (e) => {
@@ -790,19 +806,46 @@ export default function ChatArea({
 
         {/* 拍照/图片上传按钮 */}
         <input
-          ref={imageFileRef}
+          ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
           style={{ display: 'none' }}
           onChange={handleImageFileChange}
         />
-        <button
-          className={`image-btn ${imagePreview ? 'has-image' : ''}`}
-          onClick={() => imageFileRef.current?.click()}
-          disabled={loading || uploadingImage}
-          title="拍照/上传图片"
-        >📷</button>
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleImageFileChange}
+        />
+        <div className="image-btn-wrapper">
+          <button
+            className={`image-btn ${imagePreview ? 'has-image' : ''}`}
+            onClick={() => setShowImagePicker(!showImagePicker)}
+            disabled={loading || uploadingImage}
+            title="拍照/上传图片"
+          >📷</button>
+          {showImagePicker && (
+            <div className="image-picker-popup">
+              <button
+                className="image-picker-option"
+                onClick={() => { cameraInputRef.current?.click(); setShowImagePicker(false); }}
+              >
+                <span className="image-picker-icon">📸</span>
+                <span>拍照</span>
+              </button>
+              <button
+                className="image-picker-option"
+                onClick={() => { galleryInputRef.current?.click(); setShowImagePicker(false); }}
+              >
+                <span className="image-picker-icon">🖼️</span>
+                <span>从相册选择</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* 表情按钮（输入框和发送之间） */}
         <button
