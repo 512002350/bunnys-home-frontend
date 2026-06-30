@@ -798,6 +798,7 @@ export default function ChatArea({
                     position={position}
                     showAvatar={group.role === 'assistant' && isLast}
                     senderName={group.role === 'assistant' && isFirst ? characterName : null}
+                    senderId={characterId}
                     onQuote={handleQuoteRequest}
                     onRetract={isLastUser ? onRetract : null}
                     isLastUser={isLastUser}
