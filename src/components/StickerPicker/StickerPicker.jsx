@@ -61,12 +61,25 @@ export default function StickerPicker({ stickers, onSelect, onUpload, onStickerA
   const handleAddExternal = async (sticker) => {
     try {
       const result = await apiAddExternal(sticker.url, sticker.name, sticker.descr || '');
-      // 标记为已添加
-      setSearchResults(prev =>
-        prev.map(s => s.id === sticker.id ? { ...s, added: true, id: result.sticker?.id, url: result.sticker?.url } : s)
-      );
       // 通知父组件刷新列表
       if (onStickerAdded) await onStickerAdded();
+      // 重新搜索本地，让新表情立即出现在结果中
+      const localRes = await searchStickers(query).catch(() => ({ stickers: [] }));
+      setSearchResults(prev => {
+        const localResults = (localRes.stickers || []).map(s => ({ ...s, source: 'local' }));
+        const externalResults = prev
+          .filter(s => s.source === 'external')
+          .map(s => s.id === sticker.id ? { ...s, added: true } : s);
+        // 合并去重
+        const seen = new Set();
+        const merged = [];
+        for (const s of [...localResults, ...externalResults]) {
+          if (seen.has(s.id)) continue;
+          seen.add(s.id);
+          merged.push(s);
+        }
+        return merged;
+      });
     } catch (err) {
       alert('添加失败: ' + err.message);
     }
