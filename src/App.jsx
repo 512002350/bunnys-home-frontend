@@ -170,7 +170,7 @@ export default function App() {
   }, [currentSessionId, sessions]);
 
   // 发送消息
-  const handleSendMessage = useCallback(async (text) => {
+  const handleSendMessage = useCallback(async (text, typingMetrics, imageDescription) => {
     if (!text.trim() || !currentSessionId || loading) return;
 
     const userMsg = {
@@ -189,7 +189,7 @@ export default function App() {
 
     try {
       const charId = sessionChars[currentSessionId] || 'default';
-      const result = await api.sendMessage(currentSessionId, text, model, charId);
+      const result = await api.sendMessage(currentSessionId, text, model, charId, typingMetrics, imageDescription);
 
       // 处理多条 AI 回复（按 \n\n 拆分后逐条入库的）
       const replies = result.replies || [];

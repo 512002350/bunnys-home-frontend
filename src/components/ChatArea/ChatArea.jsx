@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import MessageBubble from '../MessageBubble/MessageBubble';
 import StickerPicker from '../StickerPicker/StickerPicker';
+import { sendTypingEvent, uploadChatImage } from '../../services/api';
 
 /**
  * 错峰延迟：多条 AI 回复逐条显示
@@ -197,11 +198,157 @@ export default function ChatArea({
   const [typingVisible, setTypingVisible] = useState(false);
   const [typingStage, setTypingStage] = useState(0); // 0=无, 1=等待中, 2=正在输入
   const [showCmdPanel, setShowCmdPanel] = useState(false);
+  // 图片上传状态
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageFileRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimerRef = useRef(null);
   const listRef = messageListRef || useRef(null);
   const prevMsgLenRef = useRef(0);
   const isAtBottomRef = useRef(true);
+
+  // ====== 输入行为追踪 —— 用于沈夜检测害羞/犹豫信号 ======
+  const typingMetricsRef = useRef({
+    focusTime: null,           // 输入框获得焦点的时间戳
+    firstKeystrokeTime: null,  // 第一次按键的时间戳
+    prevLength: 0,             // 上一次文本长度
+    deleteRetypeCycles: 0,     // 删了又打循环次数
+    inDeletePhase: false,      // 当前是否处于删除阶段
+    idleTimerId: null,         // 光标空闲超时定时器
+    messageReceivedTime: null, // 收到最后一条 AI 消息的时间戳
+  });
+
+  // 重置输入行为追踪
+  const resetTypingMetrics = () => {
+    const m = typingMetricsRef.current;
+    if (m.idleTimerId) clearTimeout(m.idleTimerId);
+    m.focusTime = null;
+    m.firstKeystrokeTime = null;
+    m.prevLength = 0;
+    m.deleteRetypeCycles = 0;
+    m.inDeletePhase = false;
+    m.idleTimerId = null;
+  };
+
+  // 当收到新 AI 消息时，记录时间（用于计算"看到消息后多久开始打字"）
+  useEffect(() => {
+    if (!loading && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.role === 'assistant') {
+        typingMetricsRef.current.messageReceivedTime = Date.now();
+      }
+    }
+  }, [loading, messages.length]);
+
+  const handleInputFocus = () => {
+    const now = Date.now();
+    const m = typingMetricsRef.current;
+    m.focusTime = now;
+    m.firstKeystrokeTime = null;
+    m.prevLength = input.length;
+    m.deleteRetypeCycles = 0;
+    m.inDeletePhase = false;
+
+    // 清除之前的空闲定时器
+    if (m.idleTimerId) clearTimeout(m.idleTimerId);
+
+    // 启动光标空闲检测：12 秒内没打出任何字 → 推送 cursor_idle 事件
+    m.idleTimerId = setTimeout(() => {
+      if (sessionId && m.firstKeystrokeTime === null) {
+        const idleSec = Math.round((Date.now() - m.focusTime) / 1000);
+        sendTypingEvent(sessionId, 'cursor_idle', { seconds: idleSec }).catch(() => {});
+      }
+    }, 12000);
+  };
+
+  // ====== 图片上传处理 ======
+  const handleImageFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+      setImagePreview({ base64, mimeType: file.type, dataUrl });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const removeImagePreview = () => {
+    setImagePreview(null);
+    if (imageFileRef.current) imageFileRef.current.value = '';
+  };
+
+  const handleInputChangeWithTracking = (e) => {
+    const newValue = e.target.value;
+    const now = Date.now();
+    const m = typingMetricsRef.current;
+
+    // 首次按键 → 取消光标空闲定时器
+    if (m.firstKeystrokeTime === null && newValue.length > 0 && m.focusTime !== null) {
+      m.firstKeystrokeTime = now;
+      if (m.idleTimerId) {
+        clearTimeout(m.idleTimerId);
+        m.idleTimerId = null;
+      }
+    }
+
+    // 检测"删了又打"循环：文本先变短（删除）→ 再变长（重打）= 1 个循环
+    const newLen = newValue.length;
+    const prevLen = m.prevLength;
+
+    if (newLen < prevLen && (prevLen - newLen) >= 2) {
+      // 删除阶段开始（至少删了 2 个字符才算）
+      if (!m.inDeletePhase) {
+        m.inDeletePhase = true;
+      }
+    } else if (newLen > prevLen && m.inDeletePhase && (newLen - prevLen) >= 2) {
+      // 删除后又开始重新输入（至少输入 2 个字符才算）
+      m.deleteRetypeCycles++;
+      m.inDeletePhase = false;
+
+      // 第 1-2 次删了又打 → 推送事件给后端
+      if (m.deleteRetypeCycles <= 2 && sessionId) {
+        sendTypingEvent(sessionId, 'delete_retype', { cycles: m.deleteRetypeCycles }).catch(() => {});
+      }
+    }
+
+    m.prevLength = newLen;
+    setInput(newValue);
+  };
+
+  // 构建发送时附带的输入行为元数据
+  const buildTypingMetrics = () => {
+    const m = typingMetricsRef.current;
+    const now = Date.now();
+
+    // 光标空闲时长（从获得焦点到首次按键，或到发送）
+    const cursorIdleSec = m.firstKeystrokeTime && m.focusTime
+      ? Math.round((m.firstKeystrokeTime - m.focusTime) / 1000)
+      : m.focusTime
+        ? Math.round((now - m.focusTime) / 1000)
+        : 0;
+
+    // 从收到消息到开始打字的延时
+    const reactionDelaySec = m.messageReceivedTime && m.firstKeystrokeTime
+      ? Math.round((m.firstKeystrokeTime - m.messageReceivedTime) / 1000)
+      : 0;
+
+    // 打字总时长
+    const typingDurationSec = m.firstKeystrokeTime
+      ? Math.round((now - m.firstKeystrokeTime) / 1000)
+      : 0;
+
+    return {
+      cursorIdleSeconds: cursorIdleSec,
+      reactionDelaySeconds: reactionDelaySec,
+      typingDurationSeconds: typingDurationSec,
+      finalMessageLength: input.length,
+      deleteRetypeCycles: m.deleteRetypeCycles,
+    };
+  };
 
   // 错峰显示：多条 AI 回复逐条解锁
   const revealedIndices = useStaggeredReveal(messages, loading);
@@ -287,10 +434,37 @@ export default function ChatArea({
     return () => el.removeEventListener('scroll', checkScrollPosition);
   }, [checkScrollPosition]);
 
-  const handleSend = () => {
-    if (!input.trim() || loading) return;
-    onSend(input);
-    setInput('');
+  const handleSend = async () => {
+    if ((!input.trim() && !imagePreview) || loading || uploadingImage) return;
+
+    // 收集输入行为元数据
+    const typingMetrics = buildTypingMetrics();
+    resetTypingMetrics();
+
+    let imageDescription = null;
+
+    // 如果有图片，先上传并获取 DeepSeek 识图描述
+    if (imagePreview) {
+      setUploadingImage(true);
+      try {
+        const result = await uploadChatImage(sessionId, imagePreview.base64, imagePreview.mimeType);
+        imageDescription = result.description;
+        const imageTag = `[CHAT_IMAGE]${result.url}[/CHAT_IMAGE]`;
+        const finalMessage = input.trim() ? `${imageTag} ${input}` : imageTag;
+        setImagePreview(null);
+        onSend(finalMessage, typingMetrics, imageDescription);
+        setInput('');
+      } catch (err) {
+        alert('图片上传失败: ' + err.message);
+        setUploadingImage(false);
+        return;
+      }
+      setUploadingImage(false);
+    } else {
+      onSend(input, typingMetrics, imageDescription);
+      setInput('');
+    }
+
     setShowStickers(false);
     inputRef.current?.focus();
   };
@@ -318,16 +492,24 @@ export default function ChatArea({
       .replace(/`(.+?)`/g, '$1');           // `代码`
   };
 
-  // 检测 sticker 标记并渲染
+  // 检测 sticker / 聊天图片标记并渲染
   const renderContent = (content) => {
     if (!content) return '';
-    const parts = content.split(/\[STICKER_IMG\](.*?)\[\/STICKER_IMG\]/g);
-    return parts.map((part, i) => {
+    // 先处理 [CHAT_IMAGE]url[/CHAT_IMAGE]
+    const chatImageParts = content.split(/\[CHAT_IMAGE\](.*?)\[\/CHAT_IMAGE\]/g);
+    return chatImageParts.map((part, i) => {
       if (i % 2 === 1) {
-        return <img key={i} src={part} alt="sticker" className="sticker-img" />;
+        return <img key={`ci-${i}`} src={part} alt="聊天图片" className="chat-image-inline" />;
       }
-      return part;
-    });
+      // 再处理 [STICKER_IMG]url[/STICKER_IMG]
+      const stickerParts = part.split(/\[STICKER_IMG\](.*?)\[\/STICKER_IMG\]/g);
+      return stickerParts.map((subPart, j) => {
+        if (j % 2 === 1) {
+          return <img key={`st-${i}-${j}`} src={subPart} alt="sticker" className="sticker-img" />;
+        }
+        return subPart;
+      });
+    }).flat();
   };
 
   // ---- 空状态 ----
@@ -573,16 +755,54 @@ export default function ChatArea({
               />
             </>
           )}
+          {/* 图片预览缩略图 */}
+          {imagePreview && (
+            <div className="image-preview-bar">
+              <img src={imagePreview.dataUrl} alt="预览" className="image-preview-thumb" />
+              <button className="image-preview-remove" onClick={removeImagePreview} title="移除图片">✕</button>
+              {uploadingImage && <span className="image-uploading-text">识别中...</span>}
+            </div>
+          )}
+
           <textarea
             ref={inputRef}
             className="chat-input"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={handleInputChangeWithTracking}
+            onFocus={handleInputFocus}
+            onBlur={() => {
+              // 失焦时检测：如果有过删了又打且最终内容为空或极短 → 放弃了输入
+              const m = typingMetricsRef.current;
+              if (m.deleteRetypeCycles >= 1 && input.trim().length === 0 && sessionId) {
+                sendTypingEvent(sessionId, 'abandoned_input', { cycles: m.deleteRetypeCycles }).catch(() => {});
+              }
+              // 清除空闲定时器
+              if (m.idleTimerId) {
+                clearTimeout(m.idleTimerId);
+                m.idleTimerId = null;
+              }
+            }}
             onKeyDown={handleKeyDown}
             placeholder="说点什么..."
             rows={1}
           />
         </div>
+
+        {/* 拍照/图片上传按钮 */}
+        <input
+          ref={imageFileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: 'none' }}
+          onChange={handleImageFileChange}
+        />
+        <button
+          className={`image-btn ${imagePreview ? 'has-image' : ''}`}
+          onClick={() => imageFileRef.current?.click()}
+          disabled={loading || uploadingImage}
+          title="拍照/上传图片"
+        >📷</button>
 
         {/* 表情按钮（输入框和发送之间） */}
         <button
@@ -595,7 +815,7 @@ export default function ChatArea({
         <button
           className="send-btn"
           onClick={handleSend}
-          disabled={!input.trim() || loading}
+          disabled={(!input.trim() && !imagePreview) || loading || uploadingImage}
           title="发送"
         >
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

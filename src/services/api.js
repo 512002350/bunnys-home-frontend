@@ -65,10 +65,24 @@ export async function getSessionMessages(sessionId) {
 
 // ---- 对话 ----
 
-export async function sendMessage(sessionId, message, model, character) {
+export async function sendMessage(sessionId, message, model, character, typingMetrics, imageDescription) {
   return request('/api/chat', {
     method: 'POST',
-    body: JSON.stringify({ sessionId, message, model, character }),
+    body: JSON.stringify({ sessionId, message, model, character, typingMetrics, imageDescription }),
+  });
+}
+
+export async function uploadChatImage(sessionId, imageBase64, mimeType) {
+  return request('/api/chat/upload-image', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, imageBase64, mimeType }),
+  });
+}
+
+export async function sendTypingEvent(sessionId, type, data) {
+  return request('/api/chat/typing-event', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, type, data }),
   });
 }
 
