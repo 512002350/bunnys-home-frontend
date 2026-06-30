@@ -25,6 +25,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // 跳过非 HTTP(S) 请求（chrome-extension:// 等）
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
   // API 请求走网络，不缓存
   if (url.pathname.startsWith('/api/')) {
     return;
