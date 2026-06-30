@@ -582,7 +582,7 @@ export default function ChatArea({
         const dialogueTexts = parts
           .filter(p => p.type === 'dialogue')
           .map(p => p.text);
-        if (dialogueTexts.length === 0) return ''; // 无对话内容
+        if (dialogueTexts.length === 0) return null; // 无对话内容，不渲染
         return (
           <span className="dialogue-only-content">
             {dialogueTexts.map((t, i) => (
@@ -755,12 +755,23 @@ export default function ChatArea({
             ? `animate-in ${group.role === 'user' ? 'user-group' : 'assistant-group'}${groupAge > 0 ? ` stagger-${Math.min(groupAge, 3)}` : ''}`
             : '';
 
+          // 纯对话模式：过滤掉无对话内容的 AI 消息（避免空白气泡）
+          const displayMessages = narrationMode === 'dialogue-only'
+            ? group.messages.filter(m => {
+                if (m.role !== 'assistant') return true;
+                const c = m.content || '';
+                return /\[CHAT_IMAGE\]|\[STICKER_IMG\]|「[^」]+」/.test(c);
+              })
+            : group.messages;
+
+          if (displayMessages.length === 0) return dateSep || null;
+
           const groupEl = (
             <div className={`message-group ${animClass}`} key={`g-${gi}`}>
-              {group.messages.map((msg, mi) => {
+              {displayMessages.map((msg, mi) => {
                 const isFirst = mi === 0;
-                const isLast = mi === group.messages.length - 1;
-                const isSingle = group.messages.length === 1;
+                const isLast = mi === displayMessages.length - 1;
+                const isSingle = displayMessages.length === 1;
                 let position = 'middle';
                 if (isSingle) position = 'single';
                 else if (isFirst) position = 'first';
