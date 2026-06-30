@@ -1760,14 +1760,24 @@ button { touch-action: manipulation; }
 /* ================================================================ */
 /*                      滚动条                                      */
 /* ================================================================ */
+/*                       滚动条样式（桌面端）                          */
+/* ================================================================ */
 
-::-webkit-scrollbar { width: 4px; }
+/* 标准属性（Edge 121+ / Firefox） */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.12) transparent;
+}
+
+/* WebKit 内核（Chrome / Edge / Safari） */
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: rgba(0,0,0,0.12);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar-corner { background: transparent; }
 
 /* ================================================================ */
 /*                   PWA 全屏 & 安全区域适配                          */
@@ -2054,6 +2064,7 @@ html, body, #root {
   }
 
   ::-webkit-scrollbar { width: 3px; }
+  html { scrollbar-width: thin; }
 
   /* ---- SkillManager 手机端 ---- */
   .skill-manager-panel {
