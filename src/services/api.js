@@ -152,6 +152,21 @@ export async function deleteSticker(id) {
   });
 }
 
+export async function searchStickers(query) {
+  return request(`/api/stickers/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function searchExternalStickers(query) {
+  return request(`/api/stickers/external/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function addExternalSticker(imageUrl, name, descr) {
+  return request('/api/stickers/external/add', {
+    method: 'POST',
+    body: JSON.stringify({ imageUrl, name, descr }),
+  });
+}
+
 // ---- 技能/提示词管理 ----
 
 export async function getSkills(params = {}) {

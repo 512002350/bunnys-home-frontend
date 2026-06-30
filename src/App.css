@@ -1221,6 +1221,105 @@ button { touch-action: manipulation; }
   background: var(--accent-light);
 }
 
+/* --- 表情搜索栏 --- */
+.sticker-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.sticker-search-input {
+  flex: 1;
+  padding: 7px 28px 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.sticker-search-input:focus {
+  border-color: var(--accent);
+}
+
+.sticker-search-clear {
+  position: absolute;
+  right: 6px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+/* --- 表情 Tab 切换 --- */
+.sticker-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.sticker-tab {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 12px;
+  font-family: var(--font);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.sticker-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* --- 搜索结果状态 --- */
+.sticker-search-status {
+  text-align: center;
+  padding: 20px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* --- 外源表情项 --- */
+.sticker-external-item {
+  position: relative;
+}
+
+.sticker-add-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  line-height: 1;
+}
+
+.sticker-add-btn.added {
+  background: var(--text-muted);
+}
+
 /* --- 聊天图片上传按钮 --- */
 .image-btn-wrapper {
   position: relative; flex-shrink: 0; order: 1;
@@ -1872,6 +1971,22 @@ html, body, #root {
   .sticker-upload-area {
     width: 56px;
     height: 56px;
+  }
+
+  .sticker-search-input {
+    font-size: 14px;
+    padding: 8px 30px 8px 12px;
+  }
+
+  .sticker-tab {
+    font-size: 13px;
+    padding: 7px 0;
+  }
+
+  .sticker-add-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 16px;
   }
 
   /* 空状态 */
