@@ -72,6 +72,20 @@ export async function sendMessage(sessionId, message, model, character) {
   });
 }
 
+export async function compactChat(sessionId) {
+  return request('/api/chat/compact', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
+export async function retryChat(sessionId, model) {
+  return request('/api/chat/retry', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, model }),
+  });
+}
+
 // ---- 设置 ----
 
 export async function getSettings() {

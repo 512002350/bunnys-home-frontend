@@ -295,6 +295,53 @@ export default function App() {
   const currentCharName = currentChar?.name
     || (currentCharId === 'shenye' ? '沈夜' : '小鹿');
 
+  // 手动压缩记忆
+  const handleCompact = useCallback(async () => {
+    if (!currentSessionId) return;
+    try {
+      const result = await api.compactChat(currentSessionId);
+      alert(result.message || '压缩完成');
+    } catch (err) {
+      alert('压缩失败: ' + err.message);
+    }
+  }, [currentSessionId]);
+
+  // 重新生成 AI 回复
+  const handleRetry = useCallback(async () => {
+    if (!currentSessionId || !model) return;
+    try {
+      setLoading(true);
+      // 移除最后一条 AI 消息
+      setMessages(prev => {
+        const msgs = [...(prev[currentSessionId] || [])];
+        while (msgs.length > 0 && msgs[msgs.length - 1].role === 'assistant') {
+          msgs.pop();
+        }
+        return { ...prev, [currentSessionId]: msgs };
+      });
+      const result = await api.retryChat(currentSessionId, model);
+      const replies = result.replies || [];
+      const aiMsgs = replies.length > 0
+        ? replies.map((r, i) => ({
+            id: r.messageId || `ai-${Date.now()}-${i}`,
+            session_id: currentSessionId,
+            role: 'assistant',
+            content: r.content,
+            thinking_content: r.thinking || null,
+            created_at: new Date(Date.now() + i * 1000).toISOString(),
+          }))
+        : [{ id: result.messageId || `ai-${Date.now()}`, session_id: currentSessionId, role: 'assistant', content: result.reply || '', thinking_content: result.thinking || null, created_at: new Date().toISOString() }];
+      setMessages(prev => ({
+        ...prev,
+        [currentSessionId]: [...(prev[currentSessionId] || []), ...aiMsgs],
+      }));
+    } catch (err) {
+      alert('重试失败: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentSessionId, model]);
+
   // 清空当前会话的所有消息
   const handleClearHistory = useCallback(async () => {
     if (!currentSessionId) return;
@@ -343,6 +390,8 @@ export default function App() {
         characterId={currentCharId}
         characters={characters}
         onClearHistory={handleClearHistory}
+        onCompact={handleCompact}
+        onRetry={handleRetry}
       />
       {showSettings && (
         <Settings

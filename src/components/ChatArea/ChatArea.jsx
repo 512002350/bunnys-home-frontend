@@ -186,6 +186,8 @@ export default function ChatArea({
   characterId = 'default',
   characters = [],
   onClearHistory,
+  onCompact,
+  onRetry,
 }) {
   const [input, setInput] = useState('');
   const [showStickers, setShowStickers] = useState(false);
@@ -193,6 +195,7 @@ export default function ChatArea({
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [typingVisible, setTypingVisible] = useState(false);
   const [typingStage, setTypingStage] = useState(0); // 0=无, 1=等待中, 2=正在输入
+  const [showCmdPanel, setShowCmdPanel] = useState(false);
   const inputRef = useRef(null);
   const typingTimerRef = useRef(null);
   const listRef = messageListRef || useRef(null);
@@ -506,12 +509,50 @@ export default function ChatArea({
 
       {/* 输入区 */}
       <div className="input-area">
-        <button
-          className={`sticker-btn ${showStickers ? 'active' : ''}`}
-          onClick={() => setShowStickers(!showStickers)}
-          title="表情"
-        >😊</button>
+        {/* 左下角命令按钮 */}
+        <div className="cmd-btn-wrapper">
+          <button
+            className={`cmd-btn ${showCmdPanel ? 'active' : ''}`}
+            onClick={() => setShowCmdPanel(!showCmdPanel)}
+            title="功能"
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </button>
 
+          {/* 命令菜单 */}
+          {showCmdPanel && (
+            <>
+              <div className="cmd-backdrop" onClick={() => setShowCmdPanel(false)} />
+              <div className="cmd-panel">
+                <button className="cmd-item" onClick={() => { onCompact?.(); setShowCmdPanel(false); }}>
+                  <span className="cmd-icon">🗜️</span>
+                  <div className="cmd-item-text">
+                    <span className="cmd-item-label">压缩记忆</span>
+                    <span className="cmd-item-desc">立即压缩上下文，释放 token</span>
+                  </div>
+                </button>
+                <button className="cmd-item" onClick={() => { onClearHistory?.(); setShowCmdPanel(false); }}>
+                  <span className="cmd-icon">🧹</span>
+                  <div className="cmd-item-text">
+                    <span className="cmd-item-label">清空对话</span>
+                    <span className="cmd-item-desc">清除当前会话的所有消息</span>
+                  </div>
+                </button>
+                <button className="cmd-item" onClick={() => { onRetry?.(); setShowCmdPanel(false); }}>
+                  <span className="cmd-icon">🔄</span>
+                  <div className="cmd-item-text">
+                    <span className="cmd-item-label">重新生成</span>
+                    <span className="cmd-item-desc">撤回上一条 AI 回复并重试</span>
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 输入框 */}
         <div className="input-wrapper">
           {showStickers && (
             <>
@@ -535,6 +576,14 @@ export default function ChatArea({
           />
         </div>
 
+        {/* 表情按钮（输入框和发送之间） */}
+        <button
+          className={`sticker-btn ${showStickers ? 'active' : ''}`}
+          onClick={() => setShowStickers(!showStickers)}
+          title="表情"
+        >😊</button>
+
+        {/* 发送按钮 */}
         <button
           className="send-btn"
           onClick={handleSend}

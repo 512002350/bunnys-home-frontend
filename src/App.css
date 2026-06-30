@@ -810,6 +810,103 @@ body {
 }
 
 /* fadeInUp 定义在下方（回到底部按钮动画处），此处不重复 */
+
+/* ================================================================ */
+/*                    命令面板（左下角）                               */
+/* ================================================================ */
+
+.cmd-btn-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cmd-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.cmd-btn:hover {
+  background: rgba(0,0,0,0.04);
+  color: var(--text);
+}
+.cmd-btn.active {
+  background: rgba(0,0,0,0.06);
+  color: var(--accent);
+}
+
+.cmd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+}
+
+.cmd-panel {
+  position: absolute;
+  bottom: 52px;
+  left: 0;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.14);
+  z-index: 30;
+  min-width: 240px;
+  padding: 6px 0;
+  animation: cmdSlideUp 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes cmdSlideUp {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cmd-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  transition: background 0.1s;
+}
+.cmd-item:hover {
+  background: var(--bg-sidebar);
+}
+
+.cmd-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+
+.cmd-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cmd-item-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cmd-item-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 /*                         输入区域                                  */
 /* ================================================================ */
 
