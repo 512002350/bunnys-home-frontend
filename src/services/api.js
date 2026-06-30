@@ -11,18 +11,34 @@ export async function request(path, options = {}) {
     ...options,
   };
 
-  const response = await fetch(url, config);
+  // 网络错误重试（Render 免费层冷启动可能导致前几次连接重置）
+  const MAX_RETRIES = 2;
+  let lastError;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(url, config);
 
-  if (!response.ok) {
-    // AbortError 不解析 body（已被取消）
-    if (response.status === 499 || config.signal?.aborted) {
-      throw Object.assign(new Error('请求已取消'), { name: 'AbortError' });
+      if (!response.ok) {
+        // AbortError 不解析 body（已被取消）
+        if (response.status === 499 || config.signal?.aborted) {
+          throw Object.assign(new Error('请求已取消'), { name: 'AbortError' });
+        }
+        const error = await response.json().catch(() => ({ error: '请求失败' }));
+        throw new Error(error.error || error.detail || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    } catch (err) {
+      lastError = err;
+      // AbortError 不重试
+      if (err.name === 'AbortError') throw err;
+      // 最后一次尝试也失败，抛出
+      if (attempt === MAX_RETRIES) throw err;
+      // 退避重试
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
     }
-    const error = await response.json().catch(() => ({ error: '请求失败' }));
-    throw new Error(error.error || error.detail || `HTTP ${response.status}`);
   }
-
-  return response.json();
+  throw lastError;
 }
 
 // ---- 会话 ----
