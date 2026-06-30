@@ -316,6 +316,16 @@ button { touch-action: manipulation; }
   color: var(--text);
 }
 
+.settings-btn-bottom.danger {
+  color: var(--danger);
+  font-size: 12px;
+  opacity: 0.7;
+}
+.settings-btn-bottom.danger:hover {
+  background: rgba(220, 53, 69, 0.08);
+  opacity: 1;
+}
+
 /* ================================================================ */
 /*                           对话区域                                */
 /* ================================================================ */

@@ -183,6 +183,21 @@ export default function App() {
     }
   }, [currentSessionId, sessions]);
 
+  // 一键删除所有会话
+  const handleDeleteAllSessions = useCallback(async () => {
+    const ids = sessions.map(s => s.id);
+    try {
+      await Promise.all(ids.map(id => api.deleteSession(id)));
+      setSessions([]);
+      setMessages({});
+      setCurrentSessionId(null);
+      localStorage.removeItem('bunny_session');
+    } catch (err) {
+      console.error('批量删除失败:', err);
+      alert('部分会话删除失败，请刷新后重试');
+    }
+  }, [sessions]);
+
   // 发送消息
   const handleSendMessage = useCallback(async (text, typingMetrics, imageDescription) => {
     if (!text.trim() || !currentSessionId || loading) return;
@@ -466,6 +481,7 @@ export default function App() {
         onNew={handleNewSession}
         onRename={handleRenameSession}
         onDelete={handleDeleteSession}
+        onDeleteAll={handleDeleteAllSessions}
         onSettings={handleOpenSettings}
         onSkillManager={handleOpenSkillManager}
         characters={characters}

@@ -40,6 +40,7 @@ export default function Sidebar({
   onNew,
   onRename,
   onDelete,
+  onDeleteAll,
   onSettings,
   onSkillManager,
   characters = [],
@@ -224,6 +225,20 @@ export default function Sidebar({
         <button className="settings-btn-bottom" onClick={onSettings}>
           ⚙ 设置
         </button>
+        {onDeleteAll && (
+          <button
+            className="settings-btn-bottom danger"
+            onClick={() => {
+              if (sessions.length === 0) return;
+              if (confirm(`确定要删除全部 ${sessions.length} 个会话吗？\n\n所有消息都会被永久清除，此操作不可撤销。`)) {
+                onDeleteAll();
+              }
+            }}
+            disabled={sessions.length === 0}
+          >
+            🗑 一键删除
+          </button>
+        )}
       </div>
 
       {/* 右键菜单 */}

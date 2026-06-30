@@ -420,26 +420,42 @@ export default function ChatArea({
     setShowScrollBtn(!atBottom && el.scrollHeight > el.clientHeight + 200);
   }, []);
 
-  // 滚动到底部
+  // 滚动到底部（用 rAF 确保布局完成后再滚）
   const scrollToBottom = useCallback((force = false) => {
     const el = listRef.current;
     if (!el) return;
     if (force || isAtBottomRef.current) {
-      el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
     }
   }, []);
 
-  // 新消息到达时自动滚到底部
+  // 新消息到达时自动滚到底部（用户不在底部时不强制滚动）
   useEffect(() => {
     const prevLen = prevMsgLenRef.current;
     prevMsgLenRef.current = visibleMessages.length;
-    // 如果是新增消息，滚动
     if (visibleMessages.length > prevLen) {
-      scrollToBottom(true);
+      scrollToBottom();
     }
   }, [visibleMessages.length, scrollToBottom]);
 
-  // 加载时滚到底部
+  // 流式输出：最后一条消息内容变化时，若在底部则跟随滚动
+  const lastMsgContent = visibleMessages.length > 0
+    ? visibleMessages[visibleMessages.length - 1]?.content || ''
+    : '';
+  useEffect(() => {
+    if (lastMsgContent && isAtBottomRef.current) {
+      requestAnimationFrame(() => {
+        const el = listRef.current;
+        if (el && isAtBottomRef.current) {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+    }
+  }, [lastMsgContent]);
+
+  // 加载时滚到底部（切会话）
   useEffect(() => {
     if (messages.length > 0) {
       scrollToBottom(true);
@@ -567,12 +583,12 @@ export default function ChatArea({
       const chatImageParts = content.split(/\[CHAT_IMAGE\](.*?)\[\/CHAT_IMAGE\]/g);
       return chatImageParts.map((part, i) => {
         if (i % 2 === 1) {
-          return <img key={`ci-${i}`} src={part} alt="聊天图片" className="chat-image-inline" />;
+          return <img key={`ci-${i}`} src={part} alt="聊天图片" className="chat-image-inline" onError={(e) => { e.target.style.display = 'none'; }} />;
         }
         const stickerParts = part.split(/\[STICKER_IMG\](.*?)\[\/STICKER_IMG\]/g);
         return stickerParts.map((subPart, j) => {
           if (j % 2 === 1) {
-            return <img key={`st-${i}-${j}`} src={subPart} alt="sticker" className="sticker-img" />;
+            return <img key={`st-${i}-${j}`} src={subPart} alt="sticker" className="sticker-img" onError={(e) => { e.target.style.display = 'none'; }} />;
           }
           return subPart;
         });
