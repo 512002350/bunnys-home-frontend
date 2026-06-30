@@ -86,6 +86,13 @@ export async function retryChat(sessionId, model) {
   });
 }
 
+export async function extractContext(sessionId) {
+  return request('/api/chat/extract-context', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
 // ---- 设置 ----
 
 export async function getSettings() {

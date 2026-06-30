@@ -188,6 +188,7 @@ export default function ChatArea({
   onClearHistory,
   onCompact,
   onRetry,
+  onExtractContext,
 }) {
   const [input, setInput] = useState('');
   const [showStickers, setShowStickers] = useState(false);
@@ -526,6 +527,13 @@ export default function ChatArea({
             <>
               <div className="cmd-backdrop" onClick={() => setShowCmdPanel(false)} />
               <div className="cmd-panel">
+                <button className="cmd-item" onClick={() => { onExtractContext?.(); setShowCmdPanel(false); }}>
+                  <span className="cmd-icon">💾</span>
+                  <div className="cmd-item-text">
+                    <span className="cmd-item-label">保存关键上下文</span>
+                    <span className="cmd-item-desc">提取核心信息，新会话自动继承</span>
+                  </div>
+                </button>
                 <button className="cmd-item" onClick={() => { onCompact?.(); setShowCmdPanel(false); }}>
                   <span className="cmd-icon">🗜️</span>
                   <div className="cmd-item-text">

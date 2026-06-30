@@ -295,6 +295,24 @@ export default function App() {
   const currentCharName = currentChar?.name
     || (currentCharId === 'shenye' ? '沈夜' : '小鹿');
 
+  // 保存关键上下文
+  const handleExtractContext = useCallback(async () => {
+    if (!currentSessionId) return;
+    try {
+      setLoading(true);
+      const result = await api.extractContext(currentSessionId);
+      setLoading(false);
+      if (result.ok) {
+        alert(`✅ ${result.message}\n\n摘要：${result.summary || ''}\n关键点：${(result.key_points || []).join('；')}`);
+      } else {
+        alert(result.message || '提取失败');
+      }
+    } catch (err) {
+      setLoading(false);
+      alert('提取失败: ' + err.message);
+    }
+  }, [currentSessionId]);
+
   // 手动压缩记忆
   const handleCompact = useCallback(async () => {
     if (!currentSessionId) return;
@@ -392,6 +410,7 @@ export default function App() {
         onClearHistory={handleClearHistory}
         onCompact={handleCompact}
         onRetry={handleRetry}
+        onExtractContext={handleExtractContext}
       />
       {showSettings && (
         <Settings
