@@ -96,30 +96,10 @@ function useStaggeredReveal(messages, loading) {
   return revealedIndices;
 }
 
-/**
- * 头像颜色（与 Sidebar 一致）
- */
-function avatarColor(str) {
-  const colors = [
-    '#FF6B6B', '#FF8E53', '#FFC048', '#4ECDC4',
-    '#45B7D1', '#96CEB4', '#6C5CE7', '#A29BFE',
-    '#FD79A8', '#FDCB6E', '#00B894', '#00CEC9',
-  ];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
-
-function getInitial(str) {
-  if (!str) return '?';
-  const chineseMatch = str.match(/[一-鿿]/);
-  if (chineseMatch) return chineseMatch[0];
-  return str.charAt(0).toUpperCase();
-}
+import { avatarColor, getInitial } from '../../utils/avatar';
 
 /**
+ * 消息分组：文本消息不显示头像/名字，非文本或上一轮非同一角色则显示
  * 格式化日期分隔线
  */
 function formatDateLabel(dateStr) {
@@ -178,6 +158,7 @@ export default function ChatArea({
   model,
   models,
   onSend,
+  onStop,
   onModelChange,
   stickers,
   onUploadSticker,
@@ -189,6 +170,7 @@ export default function ChatArea({
   onClearHistory,
   onCompact,
   onRetry,
+  onRetract,
   onExtractContext,
 }) {
   const [input, setInput] = useState('');
@@ -198,6 +180,13 @@ export default function ChatArea({
   const [typingVisible, setTypingVisible] = useState(false);
   const [typingStage, setTypingStage] = useState(0); // 0=无, 1=等待中, 2=正在输入
   const [showCmdPanel, setShowCmdPanel] = useState(false);
+  // 引用状态
+  const [quoteMessage, setQuoteMessage] = useState(null);  // { content, fullContent }
+  // 叙述/对话显示模式
+  const [narrationMode, setNarrationMode] = useState(() => {
+    try { return localStorage.getItem('bunny_narration_mode') || 'full'; }
+    catch { return 'full'; }
+  });
   // 图片上传状态
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -274,7 +263,21 @@ export default function ChatArea({
         sendTypingEvent(sessionId, 'cursor_idle', { seconds: idleSec }).catch(() => {});
       }
     }, 12000);
+
+    // 移动端键盘弹起 → 延迟滚到底部
+    setTimeout(() => scrollToBottom(true), 300);
   };
+
+  // ====== 引用消息 ======
+  const handleQuoteRequest = useCallback((content, pos) => {
+    // 截取前80字作为引用预览
+    const preview = content?.length > 80 ? content.slice(0, 80) + '...' : content || '';
+    setQuoteMessage({ content: preview, fullContent: content });
+  }, []);
+
+  const removeQuote = useCallback(() => {
+    setQuoteMessage(null);
+  }, []);
 
   // ====== 图片上传处理 ======
   const handleImageFileChange = (e) => {
@@ -450,6 +453,47 @@ export default function ChatArea({
     return () => el.removeEventListener('scroll', checkScrollPosition);
   }, [checkScrollPosition]);
 
+  /**
+   * 解析消息文本，分离叙述和对话
+   * 「」包裹的内容 = 对话，其余 = 叙述
+   * 返回 [{type: 'dialogue'|'narration', text: string}]
+   */
+  const parseDialogueParts = (text) => {
+    if (!text) return [];
+    const parts = [];
+    const regex = /(「[^」]+」)/g;
+    let lastIndex = 0;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      // 匹配前的叙述部分
+      if (match.index > lastIndex) {
+        const narration = text.slice(lastIndex, match.index).trim();
+        if (narration) parts.push({ type: 'narration', text: narration });
+      }
+      // 对话部分（去掉「」）
+      const dialogue = match[1].slice(1, -1);
+      if (dialogue) parts.push({ type: 'dialogue', text: dialogue });
+      lastIndex = match.index + match[1].length;
+    }
+    // 剩余的叙述
+    if (lastIndex < text.length) {
+      const narration = text.slice(lastIndex).trim();
+      if (narration) parts.push({ type: 'narration', text: narration });
+    }
+    // 如果没有找到任何「」对话，整段都是叙述
+    if (parts.length === 0) {
+      parts.push({ type: 'narration', text: text.trim() });
+    }
+    return parts;
+  };
+
+  // 切换叙述/对话显示模式
+  const handleToggleNarration = () => {
+    const next = narrationMode === 'full' ? 'dialogue-only' : 'full';
+    setNarrationMode(next);
+    try { localStorage.setItem('bunny_narration_mode', next); } catch {}
+  };
+
   const handleSend = async () => {
     if ((!input.trim() && !imagePreview) || loading || uploadingImage) return;
 
@@ -477,8 +521,13 @@ export default function ChatArea({
       }
       setUploadingImage(false);
     } else {
-      onSend(input, typingMetrics, imageDescription);
+      // 如果有引用，拼接引用内容
+      const finalMessage = quoteMessage
+        ? `> ${quoteMessage.fullContent || quoteMessage.content}\n\n${input}`
+        : input;
+      onSend(finalMessage, typingMetrics, imageDescription);
       setInput('');
+      setQuoteMessage(null);
     }
 
     setShowStickers(false);
@@ -498,34 +547,67 @@ export default function ChatArea({
     inputRef.current?.focus();
   };
 
-  // 去除 AI 回复中的 Markdown 格式标记（** **, __ __, ~~ ~~ 等）
-  const stripMarkdown = (text) => {
-    if (!text) return '';
-    return text
-      .replace(/\*\*(.+?)\*\*/g, '$1')     // **粗体**
-      .replace(/__(.+?)__/g, '$1')          // __粗体__
-      .replace(/~~(.+?)~~/g, '$1')          // ~~删除线~~
-      .replace(/`(.+?)`/g, '$1');           // `代码`
-  };
-
   // 检测 sticker / 聊天图片标记并渲染
-  const renderContent = (content) => {
+  // 同时对 AI 回复解析「」对话标记，支持叙述/对话分离显示
+  const renderContent = (content, role) => {
     if (!content) return '';
-    // 先处理 [CHAT_IMAGE]url[/CHAT_IMAGE]
-    const chatImageParts = content.split(/\[CHAT_IMAGE\](.*?)\[\/CHAT_IMAGE\]/g);
-    return chatImageParts.map((part, i) => {
-      if (i % 2 === 1) {
-        return <img key={`ci-${i}`} src={part} alt="聊天图片" className="chat-image-inline" />;
-      }
-      // 再处理 [STICKER_IMG]url[/STICKER_IMG]
-      const stickerParts = part.split(/\[STICKER_IMG\](.*?)\[\/STICKER_IMG\]/g);
-      return stickerParts.map((subPart, j) => {
-        if (j % 2 === 1) {
-          return <img key={`st-${i}-${j}`} src={subPart} alt="sticker" className="sticker-img" />;
+
+    // 先处理 [CHAT_IMAGE]url[/CHAT_IMAGE] 和 [STICKER_IMG]url[/STICKER_IMG]
+    const hasSpecialTags = /\[CHAT_IMAGE\]|\[STICKER_IMG\]/.test(content);
+
+    // 如果有特殊标签，不做对话解析，直接按原逻辑处理
+    if (hasSpecialTags) {
+      const chatImageParts = content.split(/\[CHAT_IMAGE\](.*?)\[\/CHAT_IMAGE\]/g);
+      return chatImageParts.map((part, i) => {
+        if (i % 2 === 1) {
+          return <img key={`ci-${i}`} src={part} alt="聊天图片" className="chat-image-inline" />;
         }
-        return subPart;
-      });
-    }).flat();
+        const stickerParts = part.split(/\[STICKER_IMG\](.*?)\[\/STICKER_IMG\]/g);
+        return stickerParts.map((subPart, j) => {
+          if (j % 2 === 1) {
+            return <img key={`st-${i}-${j}`} src={subPart} alt="sticker" className="sticker-img" />;
+          }
+          return subPart;
+        });
+      }).flat();
+    }
+
+    // AI 消息做「」对话解析
+    if (role === 'assistant') {
+      const parts = parseDialogueParts(content);
+
+      if (narrationMode === 'dialogue-only') {
+        // 只显示对话部分
+        const dialogueTexts = parts
+          .filter(p => p.type === 'dialogue')
+          .map(p => p.text);
+        if (dialogueTexts.length === 0) return ''; // 无对话内容
+        return (
+          <span className="dialogue-only-content">
+            {dialogueTexts.map((t, i) => (
+              <span key={i} className="dialogue-line">
+                {i > 0 && <span className="dialogue-sep"> </span>}
+                {t}
+              </span>
+            ))}
+          </span>
+        );
+      }
+
+      // 完整模式：叙述 + 对话区分样式
+      return (
+        <span className="narration-aware-content">
+          {parts.map((p, i) => (
+            <span key={i} className={p.type === 'dialogue' ? 'dialogue-text' : 'narration-text'}>
+              {p.text}
+            </span>
+          ))}
+        </span>
+      );
+    }
+
+    // 用户消息：直接返回
+    return content;
   };
 
   // ---- 空状态 ----
@@ -590,6 +672,29 @@ export default function ChatArea({
               <option key={m.id} value={m.id}>{m.name.split('（')[0]}</option>
             ))}
           </select>
+
+          {/* 叙述/对话切换按钮 */}
+          <button
+            className={`narration-toggle-btn ${narrationMode === 'dialogue-only' ? 'active' : ''}`}
+            onClick={handleToggleNarration}
+            title={narrationMode === 'full' ? '当前：完整显示。点击切换为纯对话' : '当前：纯对话。点击切换为完整显示'}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '8px',
+              border: narrationMode === 'dialogue-only' ? '2px solid var(--accent)' : '1px solid var(--border)',
+              background: narrationMode === 'dialogue-only' ? 'var(--accent-light)' : 'var(--bg)',
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              lineHeight: 1,
+            }}
+          >
+            {narrationMode === 'full' ? '📖' : '💬'}
+          </button>
 
           {/* 更多菜单 */}
           <div style={{ position: 'relative' }}>
@@ -660,6 +765,10 @@ export default function ChatArea({
                 else if (isFirst) position = 'first';
                 else if (isLast) position = 'last';
 
+                // 判断是否为最后一条可见的用户消息（用于展示撤回按钮）
+                const lastUserMsg = [...visibleMessages].reverse().find(m => m.role === 'user');
+                const isLastUser = lastUserMsg && msg.id === lastUserMsg.id;
+
                 return (
                   <MessageBubble
                     key={msg.id}
@@ -671,6 +780,9 @@ export default function ChatArea({
                     position={position}
                     showAvatar={group.role === 'assistant' && isLast}
                     senderName={group.role === 'assistant' && isFirst ? characterName : null}
+                    onQuote={handleQuoteRequest}
+                    onRetract={isLastUser ? onRetract : null}
+                    isLastUser={isLastUser}
                   />
                 );
               })}
@@ -708,6 +820,17 @@ export default function ChatArea({
 
       {/* 输入区 */}
       <div className="input-area">
+        {/* 引用栏 */}
+        {quoteMessage && (
+          <div className="quote-bar">
+            <div className="quote-bar-content">
+              <span className="quote-bar-label">引用：</span>
+              <span className="quote-bar-text">{quoteMessage.content}</span>
+            </div>
+            <button className="quote-bar-close" onClick={removeQuote} title="取消引用">✕</button>
+          </div>
+        )}
+
         {/* 左下角命令按钮 */}
         <div className="cmd-btn-wrapper">
           <button
@@ -854,18 +977,30 @@ export default function ChatArea({
           title="表情"
         >😊</button>
 
-        {/* 发送按钮 */}
-        <button
-          className="send-btn"
-          onClick={handleSend}
-          disabled={(!input.trim() && !imagePreview) || loading || uploadingImage}
-          title="发送"
-        >
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z"
-              fill="currentColor"/>
-          </svg>
-        </button>
+        {/* 发送按钮 / 停止按钮 */}
+        {loading ? (
+          <button
+            className="stop-btn"
+            onClick={onStop}
+            title="停止生成"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+            </svg>
+          </button>
+        ) : (
+          <button
+            className="send-btn"
+            onClick={handleSend}
+            disabled={(!input.trim() && !imagePreview) || uploadingImage}
+            title="发送"
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z"
+                fill="currentColor"/>
+            </svg>
+          </button>
+        )}
       </div>
     </main>
   );

@@ -1,29 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-
-/**
- * 根据字符串生成一致的颜色
- */
-function avatarColor(str) {
-  const colors = [
-    '#FF6B6B', '#FF8E53', '#FFC048', '#4ECDC4',
-    '#45B7D1', '#96CEB4', '#6C5CE7', '#A29BFE',
-    '#FD79A8', '#FDCB6E', '#00B894', '#00CEC9',
-    '#E17055', '#D63031', '#0984E3', '#6C5CE7',
-    '#E84393', '#00B894', '#FDCB6E', '#636E72',
-  ];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
-
-function getInitial(str) {
-  if (!str) return '?';
-  const chineseMatch = str.match(/[一-鿿]/);
-  if (chineseMatch) return chineseMatch[0];
-  return str.charAt(0).toUpperCase();
-}
+import { avatarColor, getInitial } from '../../utils/avatar';
 
 function formatTime(dateStr) {
   if (!dateStr) return '';

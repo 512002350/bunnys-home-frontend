@@ -31,6 +31,24 @@ function saveStoredSessionChars(map) {
   catch { /* 静默 */ }
 }
 
+/**
+ * 解析会话角色 ID：localStorage → DB → 会话名推测 → 默认
+ * 单一来源，消除 switchSession 和 render body 中的重复逻辑
+ */
+function resolveCharacterId(sessionId, session, sessionChars, characters) {
+  if (sessionId && sessionChars[sessionId]) {
+    return sessionChars[sessionId];
+  }
+  if (session?.character_id) {
+    return session.character_id;
+  }
+  if (session?.name) {
+    const matchedChar = characters.find(c => c.name && session.name.includes(c.name));
+    if (matchedChar) return matchedChar.id;
+  }
+  return 'default';
+}
+
 export default function App() {
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(getStoredSession());
@@ -45,6 +63,8 @@ export default function App() {
   const [characters, setCharacters] = useState([]);
   const [sessionChars, setSessionChars] = useState(getStoredSessionChars); // { sessionId: charId }
   const messageListRef = useRef(null);
+  const abortControllerRef = useRef(null);  // 用于中断 AI 生成
+  const wasInterruptedRef = useRef(false);  // 标记上一轮是否被中断
 
   // 加载可用角色列表
   const loadCharacters = useCallback(async () => {
@@ -101,18 +121,11 @@ export default function App() {
       }
     }
 
-    // 确定会话角色：localStorage → DB → 会话名推测 → 默认
-    let charId = sessionChars[sessionId];
-    if (!charId) {
-      const session = sessions.find(s => s.id === sessionId);
-      charId = session?.character_id;  // DB 字段（如有）
-      if (!charId) {
-        // 尝试从会话名推测角色
-        const name = session?.name || '';
-        const matchedChar = characters.find(c => c.name && name.includes(c.name));
-        charId = matchedChar?.id || 'default';
-      }
-      // 记住这个映射，下次直接命中
+    // 确定会话角色
+    const session = sessions.find(s => s.id === sessionId);
+    let charId = resolveCharacterId(sessionId, session, sessionChars, characters);
+    // 缓存结果，下次直接命中
+    if (!sessionChars[sessionId]) {
       setSessionChar(sessionId, charId);
     }
 
@@ -175,6 +188,10 @@ export default function App() {
   const handleSendMessage = useCallback(async (text, typingMetrics, imageDescription) => {
     if (!text.trim() || !currentSessionId || loading) return;
 
+    // 创建新的 AbortController
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const userMsg = {
       id: `temp-${Date.now()}`,
       session_id: currentSessionId,
@@ -182,6 +199,12 @@ export default function App() {
       content: text,
       created_at: new Date().toISOString(),
     };
+
+    // 如果上一轮被中断，追加系统提示给 AI
+    const userMsgWithContext = wasInterruptedRef.current
+      ? text + '\n\n[系统提示：上一轮你的回复被打断了。用户没有看到你后面想说的内容。他现在说了新的话——请自然地从这里接下去，不要重复之前被中断的内容。]'
+      : text;
+    wasInterruptedRef.current = false;
 
     setMessages(prev => ({
       ...prev,
@@ -191,7 +214,20 @@ export default function App() {
 
     try {
       const charId = sessionChars[currentSessionId] || 'default';
-      const result = await api.sendMessage(currentSessionId, text, model, charId, typingMetrics, imageDescription);
+      const result = await api.sendMessage(currentSessionId, userMsgWithContext, model, charId, typingMetrics, imageDescription, controller.signal);
+
+      // 如果请求被中断了
+      if (result.aborted) {
+        // 保留用户消息，但移除临时标记
+        setMessages(prev => ({
+          ...prev,
+          [currentSessionId]: [
+            ...(prev[currentSessionId] || []).filter(m => m.id !== userMsg.id),
+            { ...userMsg, id: `user-${Date.now()}` },
+          ],
+        }));
+        return;
+      }
 
       // 处理多条 AI 回复（按 \n\n 拆分后逐条入库的）
       const replies = result.replies || [];
@@ -226,16 +262,37 @@ export default function App() {
       // 刷新会话列表（更新 updated_at）
       loadSessions();
     } catch (err) {
-      alert('发送失败: ' + err.message);
-      // 移除临时消息
-      setMessages(prev => ({
-        ...prev,
-        [currentSessionId]: (prev[currentSessionId] || []).filter(m => m.id !== userMsg.id),
-      }));
+      if (err.name === 'AbortError') {
+        // 用户主动取消，不弹错误提示
+        setMessages(prev => ({
+          ...prev,
+          [currentSessionId]: [
+            ...(prev[currentSessionId] || []).filter(m => m.id !== userMsg.id),
+            { ...userMsg, id: `user-${Date.now()}` },
+          ],
+        }));
+        wasInterruptedRef.current = true;
+      } else {
+        alert('发送失败: ' + err.message);
+        // 移除临时消息
+        setMessages(prev => ({
+          ...prev,
+          [currentSessionId]: (prev[currentSessionId] || []).filter(m => m.id !== userMsg.id),
+        }));
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
-  }, [currentSessionId, loading, model, loadSessions]);
+  }, [currentSessionId, loading, model, loadSessions, sessionChars]);
+
+  // 中断 AI 生成
+  const handleStopGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      wasInterruptedRef.current = true;
+    }
+  }, []);
 
   // 模型切换
   const handleModelChange = useCallback((newModel) => {
@@ -285,20 +342,7 @@ export default function App() {
 
   // 当前会话的角色信息（localStorage → DB → 会话名推测 → 默认）
   const currentSession = sessions.find(s => s.id === currentSessionId);
-  const currentCharId = (() => {
-    if (currentSessionId && sessionChars[currentSessionId]) {
-      return sessionChars[currentSessionId];
-    }
-    if (currentSession?.character_id) {
-      return currentSession.character_id;
-    }
-    // 从会话名推测（如 "沈夜的对话" → shenye）
-    if (currentSession?.name) {
-      const matchedChar = characters.find(c => c.name && currentSession.name.includes(c.name));
-      if (matchedChar) return matchedChar.id;
-    }
-    return 'default';
-  })();
+  const currentCharId = resolveCharacterId(currentSessionId, currentSession, sessionChars, characters);
   const currentChar = characters.find(c => c.id === currentCharId);
   const currentCharName = currentChar?.name
     || (currentCharId === 'shenye' ? '沈夜' : '小鹿');
@@ -335,6 +379,8 @@ export default function App() {
   // 重新生成 AI 回复
   const handleRetry = useCallback(async () => {
     if (!currentSessionId || !model) return;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try {
       setLoading(true);
       // 移除最后一条 AI 消息
@@ -345,7 +391,8 @@ export default function App() {
         }
         return { ...prev, [currentSessionId]: msgs };
       });
-      const result = await api.retryChat(currentSessionId, model);
+      const result = await api.retryChat(currentSessionId, model, controller.signal);
+      if (result.aborted) return;
       const replies = result.replies || [];
       const aiMsgs = replies.length > 0
         ? replies.map((r, i) => ({
@@ -362,11 +409,29 @@ export default function App() {
         [currentSessionId]: [...(prev[currentSessionId] || []), ...aiMsgs],
       }));
     } catch (err) {
-      alert('重试失败: ' + err.message);
+      if (err.name !== 'AbortError') {
+        alert('重试失败: ' + err.message);
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   }, [currentSessionId, model]);
+
+  // 撤回最后一条用户消息及后续 AI 回复
+  const handleRetract = useCallback(async () => {
+    if (!currentSessionId) return;
+    try {
+      const result = await api.retractMessage(currentSessionId);
+      if (result.hidden > 0) {
+        // 重新加载消息
+        const data = await api.getSessionMessages(currentSessionId);
+        setMessages(prev => ({ ...prev, [currentSessionId]: data.messages || [] }));
+      }
+    } catch (err) {
+      alert('撤回失败: ' + err.message);
+    }
+  }, [currentSessionId]);
 
   // 清空当前会话的所有消息
   const handleClearHistory = useCallback(async () => {
@@ -408,6 +473,7 @@ export default function App() {
         model={model}
         models={MODELS}
         onSend={handleSendMessage}
+        onStop={handleStopGeneration}
         onModelChange={handleModelChange}
         stickers={stickers}
         onUploadSticker={handleUploadSticker}
@@ -419,6 +485,7 @@ export default function App() {
         onClearHistory={handleClearHistory}
         onCompact={handleCompact}
         onRetry={handleRetry}
+        onRetract={handleRetract}
         onExtractContext={handleExtractContext}
       />
       {showSettings && (

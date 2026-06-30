@@ -1,27 +1,5 @@
-// Thinking 内容不再展示，故移除 useState
-
-/**
- * 头像颜色
- */
-function avatarColor(str) {
-  const colors = [
-    '#FF6B6B', '#FF8E53', '#FFC048', '#4ECDC4',
-    '#45B7D1', '#96CEB4', '#6C5CE7', '#A29BFE',
-    '#FD79A8', '#FDCB6E', '#00B894', '#00CEC9',
-  ];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
-
-function getInitial(str) {
-  if (!str) return '?';
-  const chineseMatch = str.match(/[一-鿿]/);
-  if (chineseMatch) return chineseMatch[0];
-  return str.charAt(0).toUpperCase();
-}
+import { useRef, useCallback } from 'react';
+import { avatarColor, getInitial } from '../../utils/avatar';
 
 function formatTimestamp(dateStr) {
   if (!dateStr) return '';
@@ -46,12 +24,53 @@ export default function MessageBubble({
   position = 'single',
   showAvatar = false,
   senderName = null,
+  onQuote,
+  onRetract,
+  isLastUser = false,
 }) {
-  // thinking 内容不展示在聊天界面中
   const isUser = role === 'user';
+  const longPressTimerRef = useRef(null);
+  const preventClickRef = useRef(false);
+
+  // 长按检测 (移动端)
+  const handleTouchStart = useCallback(() => {
+    preventClickRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      preventClickRef.current = true;
+      const rect = document.activeElement?.getBoundingClientRect?.();
+      onQuote?.(content, { x: rect?.left ?? 100, y: rect?.top ?? 200 });
+    }, 500);
+  }, [content, onQuote]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    // 移动超过阈值取消长按
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  // 右键菜单 (桌面端)
+  const handleContextMenu = useCallback((e) => {
+    e.preventDefault();
+    onQuote?.(content, { x: e.clientX, y: e.clientY });
+  }, [content, onQuote]);
 
   return (
-    <div className={`message-row ${role} ${position}`}>
+    <div
+      className={`message-row ${role} ${position}`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+      onContextMenu={handleContextMenu}
+    >
       {/* AI 头像 */}
       {!isUser && (
         <div className={`message-avatar ${!showAvatar ? 'hidden' : ''}`}>
@@ -80,15 +99,24 @@ export default function MessageBubble({
 
         {/* 气泡 */}
         <div className="message-bubble">
-          {renderContent ? renderContent(content) : content}
+          {renderContent ? renderContent(content, role) : content}
         </div>
 
-        {/* 时间戳（仅最后一条显示） */}
-        {timestamp && (
-          <div className="message-time">
-            {formatTimestamp(timestamp)}
-          </div>
-        )}
+        {/* 时间戳 + 撤回按钮 */}
+        <div className="message-meta">
+          {timestamp && (
+            <span className="message-time">{formatTimestamp(timestamp)}</span>
+          )}
+          {isLastUser && isUser && onRetract && (
+            <button
+              className="retract-btn"
+              onClick={onRetract}
+              title="撤回消息（同时撤回 AI 回复）"
+            >
+              撤回
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 用户端空占位 */}

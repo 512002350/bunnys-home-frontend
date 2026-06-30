@@ -14,6 +14,10 @@ export async function request(path, options = {}) {
   const response = await fetch(url, config);
 
   if (!response.ok) {
+    // AbortError 不解析 body（已被取消）
+    if (response.status === 499 || config.signal?.aborted) {
+      throw Object.assign(new Error('请求已取消'), { name: 'AbortError' });
+    }
     const error = await response.json().catch(() => ({ error: '请求失败' }));
     throw new Error(error.error || error.detail || `HTTP ${response.status}`);
   }
@@ -65,10 +69,11 @@ export async function getSessionMessages(sessionId) {
 
 // ---- 对话 ----
 
-export async function sendMessage(sessionId, message, model, character, typingMetrics, imageDescription) {
+export async function sendMessage(sessionId, message, model, character, typingMetrics, imageDescription, signal) {
   return request('/api/chat', {
     method: 'POST',
     body: JSON.stringify({ sessionId, message, model, character, typingMetrics, imageDescription }),
+    signal,
   });
 }
 
@@ -93,10 +98,18 @@ export async function compactChat(sessionId) {
   });
 }
 
-export async function retryChat(sessionId, model) {
+export async function retractMessage(sessionId) {
+  return request('/api/chat/retract', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
+export async function retryChat(sessionId, model, signal) {
   return request('/api/chat/retry', {
     method: 'POST',
     body: JSON.stringify({ sessionId, model }),
+    signal,
   });
 }
 
@@ -228,17 +241,6 @@ export async function reloadSkill(id) {
 
 export async function testSkill(data) {
   return request('/api/skills/test', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function migrateExport() {
-  return request('/api/skills/export', { method: 'POST' });
-}
-
-export async function migrateImport(data) {
-  return request('/api/skills/import', {
     method: 'POST',
     body: JSON.stringify(data),
   });

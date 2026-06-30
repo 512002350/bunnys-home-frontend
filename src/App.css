@@ -557,6 +557,56 @@ body {
   border-radius: var(--bubble-radius) var(--bubble-radius) var(--bubble-radius) 2px;
 }
 
+/* ===== 叙述/对话分离样式 ===== */
+
+/* 对话文字：比叙述略深、略重，视觉上更突出 */
+.dialogue-text {
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+/* 叙述文字：保持默认，略淡 */
+.narration-text {
+  color: #555;
+  font-weight: 400;
+}
+
+/* 纯对话模式：对话行之间用细线分隔 */
+.dialogue-only-content {
+  display: inline;
+}
+
+.dialogue-line {
+  display: inline;
+}
+
+.dialogue-sep {
+  display: inline-block;
+  margin: 0 2px;
+}
+
+/* 纯对话模式时，段落间的自然呼吸 */
+.dialogue-only-content .dialogue-line + .dialogue-line::before {
+  content: '';
+  display: block;
+  height: 4px;
+}
+
+/* 叙述/对话切换按钮 */
+.narration-toggle-btn {
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.narration-toggle-btn:hover {
+  background: var(--accent-light);
+}
+
+.narration-toggle-btn.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
 /* 名字标签（群组第一条显示） */
 .message-sender-name {
   font-size: 12px;
@@ -570,6 +620,34 @@ body {
   font-size: 11px;
   color: var(--text-muted);
   padding: 1px 6px 0;
+}
+
+/* 消息元信息行（时间戳 + 撤回按钮） */
+.message-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1px 6px 0;
+}
+
+/* 撤回按钮 */
+.retract-btn {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-family: var(--font);
+}
+.message-row:hover .retract-btn {
+  opacity: 0.7;
+}
+.retract-btn:hover {
+  opacity: 1 !important;
+  color: #c62828;
 }
 
 /* --- Thinking 折叠区域 --- */
@@ -809,8 +887,6 @@ body {
   box-shadow: 0 4px 16px rgba(0,0,0,0.14);
 }
 
-/* fadeInUp 定义在下方（回到底部按钮动画处），此处不重复 */
-
 /* ================================================================ */
 /*                    命令面板（左下角）                               */
 /* ================================================================ */
@@ -996,6 +1072,37 @@ body {
   transform: translateX(2px);
 }
 
+/* 停止生成按钮 — loading 时替代发送按钮 */
+.stop-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  animation: stop-pulse 1.2s ease-in-out infinite;
+}
+
+.stop-btn:hover {
+  background: var(--danger-hover);
+  transform: scale(1.08);
+}
+
+.stop-btn:active {
+  transform: scale(0.95);
+}
+
+@keyframes stop-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(229, 57, 53, 0); }
+}
+
 .sticker-btn {
   width: 42px;
   height: 42px;
@@ -1158,10 +1265,6 @@ body {
   border-radius: 12px; padding: 6px 8px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
   z-index: 10; animation: slideUp 0.2s ease-out;
-}
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 .image-preview-thumb {
   width: 44px; height: 44px; border-radius: 8px;
@@ -1739,6 +1842,150 @@ body {
   }
 
   ::-webkit-scrollbar { width: 3px; }
+
+  /* ---- SkillManager 手机端 ---- */
+  .skill-manager-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .skill-manager-header {
+    padding: 12px 14px;
+  }
+
+  .skill-manager-header h2 {
+    font-size: 15px;
+  }
+
+  .sm-tabs {
+    padding: 0 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sm-tab {
+    padding: 10px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .sm-list {
+    padding: 10px;
+  }
+
+  .sm-filters {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .sm-search {
+    width: 100%;
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+
+  .sm-skill-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .sm-skill-card {
+    padding: 12px;
+  }
+
+  .sm-card-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* 编辑器移动端 */
+  .sm-editor-top {
+    flex-direction: column;
+  }
+
+  .sm-editor-fields {
+    gap: 6px;
+  }
+
+  .sm-input, .sm-select {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+
+  .sm-content-textarea {
+    font-size: 13px;
+    min-height: 200px;
+    line-height: 1.5;
+  }
+
+  .sm-editor-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sm-editor-actions .sm-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  /* 版本对比面板移动端：上下堆叠 */
+  .sm-diff-container {
+    flex-direction: column;
+  }
+
+  /* 测试面板移动端 */
+  .sm-test-form {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sm-test-form > * {
+    width: 100%;
+  }
+
+  .sm-test-result {
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  /* 按钮统一放大 */
+  .sm-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .sm-btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* 状态栏 */
+  .sm-statusbar {
+    padding: 8px 14px;
+    font-size: 11px;
+  }
+
+  /* 停止按钮移动端 */
+  .stop-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .stop-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* 叙述切换按钮移动端 */
+  .narration-toggle-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 12px !important;
+  }
 }
 
 /* ================================================================ */
@@ -1767,9 +2014,19 @@ body {
     width: 34px;
     height: 34px;
   }
-  .send-btn, .sticker-btn {
+  .send-btn, .sticker-btn, .stop-btn {
     width: 34px;
     height: 34px;
+  }
+  .stop-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+  .narration-toggle-btn {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 11px !important;
+    border-radius: 6px !important;
   }
 }
 
@@ -2365,4 +2622,115 @@ body {
   padding: 4px 12px 8px;
   font-size: 11px;
   color: var(--text-muted);
+}
+
+/* ===== 引用栏 ===== */
+.quote-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  animation: quoteSlideIn 0.15s ease-out;
+}
+@keyframes quoteSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.quote-bar-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+.quote-bar-label {
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.quote-bar-text {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+}
+.quote-bar-close {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quote-bar-close:hover {
+  background: var(--border-light);
+  color: var(--text);
+}
+
+/* ===== 长按上下文菜单 ===== */
+.msg-context-menu {
+  position: fixed;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 4px;
+  min-width: 100px;
+  animation: contextFadeIn 0.12s ease-out;
+}
+@keyframes contextFadeIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.msg-context-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-family: var(--font);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  color: var(--text);
+}
+.msg-context-item:hover {
+  background: var(--bg-sidebar);
+}
+.msg-context-item.danger {
+  color: #c62828;
+}
+.msg-context-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+/* ===== 消息长按/右键视觉反馈 ===== */
+.message-row {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.message-bubble {
+  cursor: default;
+}
+
+/* ===== Retract 撤回按钮 (移动端常显) ===== */
+@media (max-width: 768px) {
+  .retract-btn {
+    opacity: 0.5;
+  }
 }

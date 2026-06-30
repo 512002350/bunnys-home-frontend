@@ -91,7 +91,13 @@ export default function SkillEditor({ skill, onSave, onDelete, onBack }) {
               变量预览
               <button className="sm-btn sm-btn-sm" onClick={() => setPreview('')}>关闭</button>
             </div>
-            <div className="sm-preview-content" dangerouslySetInnerHTML={{ __html: preview }} />
+            <div className="sm-preview-content">
+              {content.split(/({{[^}]+}})/g).map((part, i) =>
+                part.startsWith('{{') && part.endsWith('}}')
+                  ? <mark key={i} className="sm-var">{part}</mark>
+                  : part
+              )}
+            </div>
           </div>
         )}
       </div>

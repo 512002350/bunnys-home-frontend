@@ -7,6 +7,13 @@
     <link rel="icon" type="image/svg+xml" href="/bunny.svg" />
     <link rel="manifest" href="/manifest.json" />
     <title>Bunny's Home</title>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(function(err) {
+          console.warn('SW 注册失败:', err);
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

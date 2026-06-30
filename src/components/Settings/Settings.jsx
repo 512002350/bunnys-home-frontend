@@ -14,15 +14,33 @@ export default function Settings({ settings, onSave, onClose }) {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const validateNumeric = (value, fieldName, min, max) => {
+    const num = fieldName === 'temperature' ? parseFloat(value) : parseInt(value);
+    if (isNaN(num)) { alert(`${fieldName} 必须是数字`); return null; }
+    if (num < min || num > max) { alert(`${fieldName} 范围: ${min}–${max}`); return null; }
+    return num;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const temp = validateNumeric(form.temperature, 'Temperature', 0, 2);
+    if (temp === null) return;
+    const rounds = validateNumeric(form.context_rounds, '上下文轮数', 2, 50);
+    if (rounds === null) return;
+    const threshold = validateNumeric(form.compression_threshold_tokens, '压缩阈值', 1000, 100000);
+    if (threshold === null) return;
+    const keep = validateNumeric(form.compressed_rounds_to_keep, '保留轮数', 1, 20);
+    if (keep === null) return;
+    const maxTokens = validateNumeric(form.max_response_tokens, '最大回复 token', 256, 32000);
+    if (maxTokens === null) return;
+
     onSave({
       ...form,
-      temperature: parseFloat(form.temperature),
-      context_rounds: parseInt(form.context_rounds),
-      compression_threshold_tokens: parseInt(form.compression_threshold_tokens),
-      compressed_rounds_to_keep: parseInt(form.compressed_rounds_to_keep),
-      max_response_tokens: parseInt(form.max_response_tokens),
+      temperature: temp,
+      context_rounds: rounds,
+      compression_threshold_tokens: threshold,
+      compressed_rounds_to_keep: keep,
+      max_response_tokens: maxTokens,
     });
   };
 

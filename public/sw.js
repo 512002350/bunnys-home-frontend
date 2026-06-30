@@ -1,7 +1,7 @@
 // Bunny's Home · Service Worker
 const CACHE_NAME = 'bunny-cache-v1';
 
-const PRECACHE = ['/', '/index.html', '/manifest.json', '/bunny.svg'];
+const PRECACHE = ['/', '/index.html', '/manifest.json', '/bunny.svg', '/bunny-192.png', '/bunny-512.png'];
 
 // 安装：预缓存核心文件
 self.addEventListener('install', (event) => {
