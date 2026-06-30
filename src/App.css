@@ -1082,25 +1082,31 @@ button { touch-action: manipulation; }
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: none;
-  background: var(--danger);
-  color: #fff;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  animation: stop-pulse 1.2s ease-in-out infinite;
 }
 
 .stop-btn:hover {
-  background: var(--danger-hover);
-  transform: scale(1.08);
+  background: var(--bg-sidebar);
+  color: var(--text);
+  border-color: var(--text-muted);
 }
 
 .stop-btn:active {
   transform: scale(0.95);
+  background: var(--border-light);
+}
+
+/* 停止按钮内 SVG 的红色方块 */
+.stop-btn svg {
+  color: var(--text-secondary);
 }
 
 @keyframes stop-pulse {
@@ -2861,10 +2867,12 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   background: var(--bg-sidebar);
+  border-top: 1px solid var(--border-light);
   border-bottom: 1px solid var(--border-light);
   font-size: 12px;
+  flex-shrink: 0;
   animation: quoteSlideIn 0.15s ease-out;
 }
 @keyframes quoteSlideIn {

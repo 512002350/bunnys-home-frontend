@@ -496,7 +496,13 @@ export default function ChatArea({
   };
 
   const handleSend = async () => {
-    if ((!input.trim() && !imagePreview) || loading || uploadingImage) return;
+    if ((!input.trim() && !imagePreview) || uploadingImage) return;
+
+    // 如果正在生成回复，先停止当前生成再发送（避免输入被阻塞）
+    if (loading) {
+      onStop?.();
+      await new Promise(r => setTimeout(r, 100));
+    }
 
     // 收集输入行为元数据
     const typingMetrics = buildTypingMetrics();
@@ -830,18 +836,19 @@ export default function ChatArea({
         </button>
       )}
 
+      {/* 引用栏 —— 独立于输入区，避免挤压输入框布局 */}
+      {quoteMessage && (
+        <div className="quote-bar">
+          <div className="quote-bar-content">
+            <span className="quote-bar-label">引用：</span>
+            <span className="quote-bar-text">{quoteMessage.content}</span>
+          </div>
+          <button className="quote-bar-close" onClick={removeQuote} title="取消引用">✕</button>
+        </div>
+      )}
+
       {/* 输入区 */}
       <div className="input-area">
-        {/* 引用栏 */}
-        {quoteMessage && (
-          <div className="quote-bar">
-            <div className="quote-bar-content">
-              <span className="quote-bar-label">引用：</span>
-              <span className="quote-bar-text">{quoteMessage.content}</span>
-            </div>
-            <button className="quote-bar-close" onClick={removeQuote} title="取消引用">✕</button>
-          </div>
-        )}
 
         {/* 左下角命令按钮 */}
         <div className="cmd-btn-wrapper">
