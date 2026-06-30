@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { searchStickers, searchExternalStickers, addExternalSticker as apiAddExternal } from '../../services/api';
 
-export default function StickerPicker({ stickers, onSelect, onUpload, onClose }) {
+export default function StickerPicker({ stickers, onSelect, onUpload, onStickerAdded, onClose }) {
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState('local'); // 'local' | 'search'
   const [searchResults, setSearchResults] = useState([]);
@@ -60,11 +60,13 @@ export default function StickerPicker({ stickers, onSelect, onUpload, onClose })
   // 添加外部表情到本地
   const handleAddExternal = async (sticker) => {
     try {
-      await apiAddExternal(sticker.url, sticker.name, sticker.descr || '');
+      const result = await apiAddExternal(sticker.url, sticker.name, sticker.descr || '');
       // 标记为已添加
       setSearchResults(prev =>
-        prev.map(s => s.id === sticker.id ? { ...s, added: true } : s)
+        prev.map(s => s.id === sticker.id ? { ...s, added: true, id: result.sticker?.id, url: result.sticker?.url } : s)
       );
+      // 通知父组件刷新列表
+      if (onStickerAdded) await onStickerAdded();
     } catch (err) {
       alert('添加失败: ' + err.message);
     }

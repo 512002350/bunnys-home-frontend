@@ -162,6 +162,7 @@ export default function ChatArea({
   onModelChange,
   stickers,
   onUploadSticker,
+  onStickerAdded,
   messageListRef,
   onMenuClick,
   characterName = '小鹿',
@@ -890,6 +891,7 @@ export default function ChatArea({
                 stickers={stickers}
                 onSelect={handleStickerSelect}
                 onUpload={onUploadSticker}
+                onStickerAdded={onStickerAdded}
                 onClose={() => setShowStickers(false)}
               />
             </>

@@ -338,6 +338,11 @@ export default function App() {
     }
   }, [loadStickers]);
 
+  // 外部表情添加后刷新列表
+  const handleStickerAdded = useCallback(async () => {
+    await loadStickers();
+  }, [loadStickers]);
+
   const currentMessages = messages[currentSessionId] || [];
 
   // 当前会话的角色信息（localStorage → DB → 会话名推测 → 默认）
@@ -477,6 +482,7 @@ export default function App() {
         onModelChange={handleModelChange}
         stickers={stickers}
         onUploadSticker={handleUploadSticker}
+        onStickerAdded={handleStickerAdded}
         messageListRef={messageListRef}
         onMenuClick={() => setSidebarOpen(true)}
         characterName={currentCharName}
