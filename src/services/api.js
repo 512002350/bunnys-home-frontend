@@ -138,3 +138,108 @@ export async function deleteSticker(id) {
     method: 'DELETE',
   });
 }
+
+// ---- 技能/提示词管理 ----
+
+export async function getSkills(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.type) qs.set('type', params.type);
+  if (params.category) qs.set('category', params.category);
+  if (params.enabled !== undefined) qs.set('enabled', params.enabled);
+  if (params.search) qs.set('search', params.search);
+  if (params.tags) qs.set('tags', params.tags.join(','));
+  const query = qs.toString();
+  return request(`/api/skills${query ? '?' + query : ''}`);
+}
+
+export async function getSkill(id, version) {
+  const query = version ? `?version=${version}` : '';
+  return request(`/api/skills/${id}${query}`);
+}
+
+export async function createSkill(data) {
+  return request('/api/skills', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSkill(id, data) {
+  return request(`/api/skills/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSkill(id) {
+  return request(`/api/skills/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getSkillVersions(id) {
+  return request(`/api/skills/${id}/versions`);
+}
+
+export async function getSkillVersion(id, version) {
+  return request(`/api/skills/${id}/versions/${version}`);
+}
+
+export async function getSkillDiff(id, v1, v2) {
+  return request(`/api/skills/${id}/diff?v1=${v1}&v2=${v2}`);
+}
+
+export async function rollbackSkill(id, version, changeSummary, author) {
+  return request(`/api/skills/${id}/rollback`, {
+    method: 'POST',
+    body: JSON.stringify({ version, change_summary: changeSummary, author: author || 'ui' }),
+  });
+}
+
+export async function getCompositions() {
+  return request('/api/skills/compositions');
+}
+
+export async function getComposition(id) {
+  return request(`/api/skills/compositions/${id}`);
+}
+
+export async function updateComposition(id, data) {
+  return request(`/api/skills/compositions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function previewComposition(id, context) {
+  return request(`/api/skills/compositions/${id}/preview`, {
+    method: 'POST',
+    body: JSON.stringify({ context }),
+  });
+}
+
+export async function reloadSkills() {
+  return request('/api/skills/reload', { method: 'POST' });
+}
+
+export async function reloadSkill(id) {
+  return request(`/api/skills/reload/${id}`, { method: 'POST' });
+}
+
+export async function testSkill(data) {
+  return request('/api/skills/test', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function migrateExport() {
+  return request('/api/skills/export', { method: 'POST' });
+}
+
+export async function migrateImport(data) {
+  return request('/api/skills/import', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}

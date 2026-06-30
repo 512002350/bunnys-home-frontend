@@ -65,6 +65,7 @@ export default function Sidebar({
   onRename,
   onDelete,
   onSettings,
+  onSkillManager,
   characters = [],
 }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,6 +214,9 @@ export default function Sidebar({
 
       {/* 底部 */}
       <div className="sidebar-footer">
+        <button className="settings-btn-bottom" onClick={onSkillManager}>
+          🧩 技能管理
+        </button>
         <button className="settings-btn-bottom" onClick={onSettings}>
           ⚙ 设置
         </button>

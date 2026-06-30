@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from './components/Sidebar/Sidebar';
 import ChatArea from './components/ChatArea/ChatArea';
 import Settings from './components/Settings/Settings';
+import SkillManager from './components/SkillManager/SkillManager';
 import * as api from './services/api';
 
 const MODELS = [
@@ -37,6 +38,7 @@ export default function App() {
   const [model, setModel] = useState(getStoredModel);
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSkillManager, setShowSkillManager] = useState(false);
   const [settings, setSettings] = useState(null);
   const [stickers, setStickers] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -253,6 +255,12 @@ export default function App() {
     setShowSettings(true);
   }, []);
 
+  // 技能管理
+  const handleOpenSkillManager = useCallback(() => {
+    setSidebarOpen(false);
+    setShowSkillManager(true);
+  }, []);
+
   const handleSaveSettings = useCallback(async (updates) => {
     try {
       const data = await api.updateSettings(updates);
@@ -390,6 +398,7 @@ export default function App() {
         onRename={handleRenameSession}
         onDelete={handleDeleteSession}
         onSettings={handleOpenSettings}
+        onSkillManager={handleOpenSkillManager}
         characters={characters}
       />
       <ChatArea
@@ -417,6 +426,11 @@ export default function App() {
           settings={settings}
           onSave={handleSaveSettings}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+      {showSkillManager && (
+        <SkillManager
+          onClose={() => setShowSkillManager(false)}
         />
       )}
     </div>
