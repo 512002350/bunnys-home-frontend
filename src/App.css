@@ -818,6 +818,7 @@ body {
 .cmd-btn-wrapper {
   position: relative;
   flex-shrink: 0;
+  order: 0;
 }
 
 .cmd-btn {
@@ -927,6 +928,7 @@ body {
   align-items: flex-end;
   background: var(--bg-sidebar);
   border-radius: 22px;
+  order: 1;
   border: 1px solid transparent;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   padding: 2px;
@@ -961,6 +963,7 @@ body {
   border-radius: 50%;
   border: none;
   cursor: pointer;
+  order: 3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1007,6 +1010,7 @@ body {
   color: var(--text-secondary);
   transition: all 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
   flex-shrink: 0;
+  order: 2;
 }
 .sticker-btn:hover {
   background: rgba(0,0,0,0.04);
@@ -1564,6 +1568,10 @@ body {
     padding: 7px 2px 7px 12px;
   }
 
+  .cmd-btn {
+    width: 38px;
+    height: 38px;
+  }
   .send-btn, .sticker-btn {
     width: 38px;
     height: 38px;
@@ -1676,6 +1684,10 @@ body {
     font-size: 15px;
   }
 
+  .cmd-btn {
+    width: 34px;
+    height: 34px;
+  }
   .send-btn, .sticker-btn {
     width: 34px;
     height: 34px;
