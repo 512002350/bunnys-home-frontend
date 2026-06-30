@@ -6,9 +6,8 @@ import SkillManager from './components/SkillManager/SkillManager';
 import * as api from './services/api';
 
 const MODELS = [
-  { id: 'deepseek-chat', name: 'DeepSeek（推荐·国内可用）' },
-  { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4（需翻墙）' },
-  { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4（需翻墙）' },
+  { id: 'deepseek/deepseek-v4-pro', name: 'DeepSeek V4 Pro' },
+  { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4（Anthropic 直连）' },
 ];
 
 function getStoredModel() {
