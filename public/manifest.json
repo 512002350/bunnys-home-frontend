@@ -2,11 +2,16 @@
   "name": "Bunny's Home",
   "short_name": "Bunny",
   "description": "给你的 AI 一个家",
-  "start_url": "/",
+  "id": "/",
+  "start_url": "/?pwa=1",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#f8f7f6",
   "theme_color": "#8b7fcf",
   "orientation": "portrait-primary",
+  "lang": "zh-CN",
+  "categories": ["social", "lifestyle"],
   "icons": [
     {
       "src": "/bunny-192.png",
