@@ -191,13 +191,41 @@ export default function ChatArea({
   const [showStickers, setShowStickers] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [typingVisible, setTypingVisible] = useState(false);
+  const [typingStage, setTypingStage] = useState(0); // 0=无, 1=等待中, 2=正在输入
   const inputRef = useRef(null);
+  const typingTimerRef = useRef(null);
   const listRef = messageListRef || useRef(null);
   const prevMsgLenRef = useRef(0);
   const isAtBottomRef = useRef(true);
 
   // 错峰显示：多条 AI 回复逐条解锁
   const revealedIndices = useStaggeredReveal(messages, loading);
+
+  // ====== 打字模拟：随机延迟后显示"正在输入..."气泡 ======
+  useEffect(() => {
+    if (loading) {
+      // 阶段1：随机等待 1.5~4 秒（模拟思考时间）
+      const typingDelay = 1500 + Math.random() * 2500;
+      setTypingStage(1);
+      typingTimerRef.current = setTimeout(() => {
+        setTypingStage(2); // 阶段2：显示"正在输入..."
+        setTypingVisible(true);
+        // 阶段3：消息到达后 typingVisible 由 loading 变为 false 自动关闭
+      }, typingDelay);
+    } else {
+      // loading 结束 → 关闭打字动画
+      setTypingVisible(false);
+      setTypingStage(0);
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, [loading]);
 
   // 只取已解锁的消息进行分组渲染
   const visibleMessages = useMemo(
@@ -333,8 +361,8 @@ export default function ChatArea({
           </div>
           <div className="chat-header-info">
             <div className="chat-header-name">{characterName}</div>
-            <div className="chat-header-status">
-              {loading ? '正在输入...' : '在线'}
+            <div className={`chat-header-status ${typingStage === 2 ? 'typing-status' : ''}`}>
+              {typingStage === 2 ? '正在输入...' : loading ? '思考中...' : '在线'}
             </div>
           </div>
         </div>
@@ -450,7 +478,23 @@ export default function ChatArea({
           return dateSep ? [dateSep, groupEl] : groupEl;
         })}
 
-        {/* 正在输入状态通过头部状态栏显示，此处不再渲染气泡 */}
+        {/* 打字动画气泡 */}
+        {typingVisible && (
+          <div className="typing-row">
+            <div
+              className="typing-avatar"
+              style={{ background: avatarColor(characterId) }}
+            >
+              {getInitial(characterName)}
+            </div>
+            <div className="typing-bubble">
+              <span className="typing-text">正在输入</span>
+              <span className="typing-dot-anim">.</span>
+              <span className="typing-dot-anim">.</span>
+              <span className="typing-dot-anim">.</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 滚动到底部按钮 */}
